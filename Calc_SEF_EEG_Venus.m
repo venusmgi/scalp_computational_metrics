@@ -1,70 +1,96 @@
-function [freq95, powerMatFull,powerMat] = Calc_SEF_EEG_Venus(EEG_filt,fs,epochLength)
-% Calculates the spectral edge frequency value for each channel    
-% Inputs:   EEG_filt: Filtered clean EEG data
+function [SEF,deltaDB] = Calc_SEF_EEG_Venus(data,fs,epochLength)
+% Calculates the spectral edge frequency value for each channel
+% Inputs:   EEG_filt: EEG data, channels x time
 %           fs: Sampling rate
 %           epochLength: Epoch length (seconds, default 5)
 % Outputs:  freq95: Spectral edge frequency value for each channel
-%           powerMatFull: Matrix containing the Spectral edge frequency 
+%           powerMatFull: Matrix containing the Spectral edge frequency
 %                         values for each channel up to 55 Hz
 %
 % Previously called: "calculateSEF_UCB.m"
 % Code used in Smith et al. 2021
 % Rachel J. Smith (Lopouratory 2019)
 %
-% V.1.0: Comment code, generalized code to fit generic EEG datsets 
-%        Remove 19 channel label setup from function 
-%        Combined calculateSEF_UCB and calculateSEF_UCB_full together 
+% V.1.0: Comment code, generalized code to fit generic EEG datsets
+%        Remove 19 channel label setup from function
+%        Combined calculateSEF_UCB and calculateSEF_UCB_full together
 %        (both are identical but separately for some reason)
 % V.1.1: Uploaded onto github (DH)
 % V.1.2 : Venus added powerMat as the output, set fs to 200, removed
-% resampling 
+% resampling
 
+nSecs = floor(size(data,2)./fs);  % duration of data matrix, in seconds
+nEpochs = floor(nSecs./epochLength);  % number of epochs in data
+nChan = size(data,1);  % number of EEG channels
 
-    nSecs = floor(size(EEG_filt,2)./fs);
-    nEpochs = floor(nSecs./epochLength);
-    nChan = size(EEG_filt,1);
+% Initialize variables for outputs
+SEF = nan(nEpochs,nChan);
+deltaDB = nan(nEpochs,nChan);
 
-    % % Downsample to 200 hz
-    % if fs~=200
-    %     EEG_new = nan(nChan,nSecs*20);
-    %     for p = 1:nChan
-    %         EEG_new(p,:) = interp1(1/fs:1/fs:nSecs,EEG_filt(p,1:nSecs*fs),1/20:1/20:nSecs);
-    %     end
-    %     EEG_filt = EEG_new;
-    %     fs = 200;
-    % end
-    
-    % Initialize variables
-    powerMat = nan(nChan,(epochLength*200)/2+1,nEpochs);   
-    EEG = EEG_filt;
-    
+% Set 55 Hz cutoff for SEF calculation
+cutoff = Find_Freq_Ind(55,fs,epochLength);
 
-    % For each epoch, calculate the power in each frequency point
-    for n = 1:nEpochs
-        patData = EEG(:,(n-1)*(epochLength*fs)+1:(n*epochLength*fs));
-        for j = 1:size(EEG,1)
-            channelData = patData(j,:);
-            fftVals = abs(fft(channelData));
-            powerMat(j,:,n) = fftVals(1:size(fftVals,2)/2+1);
-        end
-    end
-    
-    % Calculate sum, norm, and cumulative sum of powers
+% Set frequency ranges for EEG bands
+deltaInd = Find_Freq_Ind([1 4],fs,epochLength);
+% thetaInd = ...  % VENUS ADD THIS
 
-    meanPowerMatrix = (mean(powerMat,3,'omitnan')).^2;
-    powerMatFull = meanPowerMatrix(:,1:275); % powerMatFull for SEF Full    
-    meanPowerMatrix2 = meanPowerMatrix(:,1:275); % this is 55 Hz
-    sumPower = sum(meanPowerMatrix2,2);
-    normPower = meanPowerMatrix2./repmat(sumPower,1,275); %55 Hz
-    cumSumNorm = cumsum(normPower,2);
-    freq95 = nan(1,nChan);
+% For each epoch, calculate the power spectrum
+for epochInd = 1:nEpochs
+    % Select epoch
+    startInd = (epochInd-1)*(epochLength*fs)+1;
+    stopInd = (epochInd*epochLength*fs);
+    eegEpoch = data(:,startInd:stopInd)'; % transpose data so each channel is in a column
     
-    for k= 1:nChan
-        [~,index] = min(abs(cumSumNorm(k,:)-0.95));
-        fVec =  linspace(0,200/2,501);
-        freq95(k) = fVec(index);
-    end
-    
-    freq95(freq95==0) = nan;
-        
+    % Apply windowing function to epoch of EEG data
+    % VENUS CHECK THIS, I HAVEN'T DEBUGGED IT
+    win = hann(stopInd-startInd+1);  % create hanning window based on number of time points in eegEpoch
+    eegEpochWin = repmat(win,1,nChan).*eegEpoch;  % apply window to EEG in each channel
+
+    % Calculate FFT and EEG power
+    fftVals = abs(fft(eegEpochWin)).^2;  % Calculate power; dimension is # frequencies x # channels
+    fftVals = fftVals(1:size(fftVals,2)/2+1, :);  % remove negative frequencies
+
+    % Calculate SEF
+    SEF(epochInd,:) = Calc_SEF(fftVals,cutoff);  % dimension is 1 x channels
+
+    % Calculate power in each frequency band
+    deltaDB(epochInd,:) = Calc_Total_Power(fftVals, deltaInd, epochLength, fs, win);
+    % ADD theta, alpha, etc.
+
 end
+
+return
+
+
+% Function to calculate SEF for one epoch
+function SEF = Calc_SEF(fftVals, cutoff)
+% ADD DESCRIPTIONS OF INPUTS AND OUTPUTS
+    powerSpec = fftVals(1:cutoff,:);  % frequencies (up to 55 Hz) x channels
+    SEF = prctile(powerSpec,95,1); % calculate 95th percentile for each column
+return
+
+% Function to find the index for a specific frequency value associated with the fft
+% result
+function fInd = Find_Freq_Ind(freq,epochLength)
+% ADD DESCRIPTIONS OF INPUTS AND OUTPUTS
+    fInd = floor(freq*epochLength);  %VENUS CHECK THIS!
+return
+
+function powerDecibel = Calc_Total_Power(fftVals, freqInd, epochLength, fs, win)
+% ADD DESCRIPTIONS OF INPUTS and OUTPUTS
+% Note that freqInd can be either a scalar or a vector
+
+    % Extract power values for the desired frequency band
+    powerMat = fftVals(freqInd(1):freqInd(2), :);  % dimension is frequencies x channels
+
+    % Convert power to power spectral density
+    S = sum(win.^2);  % scaling factor based on windowing function
+    psdEEG = (2/(fs*S))*powerMat;  % Divide by fs and multiply by scaling factor to obtain power spectral density (power/Hz)
+    
+    % Calculate total power in the desired frequency band and convert to
+    % decibels
+    powerIntegral = sum(psdEEG,1)*(1/epochLength);  % calculate the area; sum the power and multiply by the frequency increment
+    powerDecibel = 10*log10(powerIntegral);  % convert total power to decibels
+return
+
+
