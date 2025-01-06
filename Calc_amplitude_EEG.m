@@ -1,87 +1,49 @@
-function [ampMatrix] = Calc_amplitude_EEG(data,fs)
-% Outputs a matrix of all amplitude values for each one second window
-% The data should already be divided into one second windows from the
-% get_cleanData_EEG epochs. 
-% Inputs:   data: Filtered clean EEG data
-%           fs: Sampling rate
-% Outputs:  ampMatrix:  matrix of all amplitude values for each one second window
-% (channels x nSeconds)
+function [ampMatrix] = Calc_Amplitude_Range_EEG(data, fs)
+% Outputs a matrix of all amplitude values for each one second window,
+% calculated using the range (peak-to-peak).
+% If artifactual epochs need to be removed, they can be identified using
+% get_cleanData_EEG epochs and the artifactual amplitude values can be
+% removed later.
+%
+% Inputs:
+%    data: EEG data, channels x time points
+%    fs: Sampling rate
+% Outputs:
+%    ampMatrix: matrix of all amplitude values for each one second window
+%               (channels x nSeconds)
 %
 % Previously called: "calculate_Amplitude_full.m"
 % Code used in Smith et al. 2021
 % Rachel J. Smith (Lopouratory 2019)
 %
 % V.1.0: Comment code, generalized code to fit generic EEG datsets (DH)
-%        Remove 19 channel label setup from function  
+%        Remove 19 channel label setup from function
 % V.1.1: Uploaded onto github (DH)
+% V2: Updated based on lab code review on 12/18/24
 
+% IDEAS FOR SUBSEQUENT REVISION: 
+% - let user input length of window (do not restrict to 1 second); use
+% variable "epochLength" to be consistent with SEF/Power spec code
+% - transpose data matrix in main code for faster processing?
 
- nsamps = size(data,2);
- nSecs = floor(nsamps./fs);
- 
-   
-   ampMatrix = nan(size(data,1),nSecs);
-   
-   for ch = 1:size(data,1)
-       
-        amps = zeros(1,nSecs);
-        for j=1:nSecs
-            EEG_vec = data(ch,(j-1)*fs+1:j*fs);
-            amps(j) = max(EEG_vec)-min(EEG_vec);
-        end
-        
-        ampMatrix(ch,:) = amps; % replaces switch case below
-%        chanLabel = labels{ch};
-%             switch chanLabel
-%                 case 'Fp1'
-%                     ampMatrix(1,:) = amps;
-%                 case 'FP1'
-%                     ampMatrix(1,:) = amps;
-%                 case 'Fp2'
-%                     ampMatrix(2,:) = amps;
-%                 case 'FP2'
-%                     ampMatrix(2,:) = amps;
-%                 case 'F3'
-%                     ampMatrix(3,:) = amps;
-%                 case 'F4'
-%                     ampMatrix(4,:) = amps;
-%                 case 'C3'
-%                     ampMatrix(5,:) = amps;
-%                 case 'C4'
-%                     ampMatrix(6,:) = amps;
-%                 case 'P3'
-%                     ampMatrix(7,:) = amps;
-%                 case 'P4'
-%                     ampMatrix(8,:) = amps;
-%                 case 'O1'
-%                     ampMatrix(9,:) = amps;
-%                 case 'O2'
-%                     ampMatrix(10,:) = amps;
-%                 case 'F7'
-%                     ampMatrix(11,:) = amps;
-%                 case 'F8'
-%                     ampMatrix(12,:) = amps;
-%                 case 'T3'
-%                     ampMatrix(13,:) = amps;
-%                 case 'T4'
-%                     ampMatrix(14,:) = amps;
-%                 case 'T5'
-%                     ampMatrix(15,:) = amps;
-%                 case 'T6'
-%                     ampMatrix(16,:) = amps;
-%                 case 'Fz'
-%                     ampMatrix(17,:) = amps;
-%                 case 'FZ'
-%                     ampMatrix(17,:) = amps;
-%                 case 'Cz'
-%                     ampMatrix(18,:) = amps;
-%                 case 'CZ'
-%                     ampMatrix(18,:) = amps;
-%                 case 'Pz'
-%                     ampMatrix(19,:) = amps;
-%                 case 'PZ'
-%                     ampMatrix(19,:) = amps;
-%             end   
-    end
-   
+nChan = size(data,1);  % number of EEG channels
+nSamps = size(data,2);  % number of samples (time)
+nSecs = floor(nSamps./fs);  % number of 1-second windows
+
+% Check that the data matrix is in the correct orientation
+assert(nChan < nSamps, 'Warning: Number of channels is greater than number of time samples! Data matrix may need to be transposed.')
+
+% Check that the data contains at least 1 second of data
+assert(nSamps >= fs, 'Warning: Data matrix contains less than one second of data.')
+
+% Initialize matrix for amplitude values, channels x 1-sec windows
+ampMatrix = nan(nChan,nSecs);
+
+% Loop through all 1-second windows
+for win=1:nSecs
+    startInd = (win-1)*fs+1;  % starting index for 1-second window
+    stopInd = win*fs;  % ending index for 1-second window
+    eegWin = data(:,startInd:stopInd);  % select 1-second window of EEG
+    ampMatrix(:,win) = max(eegWin,[],2) - min(eegWin,[],2); % Calculate range for this window of data
 end
+
