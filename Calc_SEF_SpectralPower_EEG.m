@@ -1,4 +1,4 @@
-function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower_EEG(data,fs,epochLength,startignIndices)
+function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower_EEG(data,fs,epochLength,startingIndices)
 % CALC_SEF_EEG_VENUS Calculates spectral edge frequency and band powers for EEG data
 %
 % Inputs:
@@ -43,8 +43,8 @@ function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower_E
 validateattributes(fs, {'numeric'}, {'scalar','positive'}, 'Calc_SEF_EEG_Venus', 'fs', 2)
 validateattributes(epochLength, {'numeric'}, {'scalar', 'positive'}, 'Calc_SEF_EEG_Venus','epochLength',3)
 
-if nargin > 3
-    nEpochs = length(startignIndices);
+if nargin == 4
+    nEpochs = length(startingIndices);
 else
     % Initialize variables for outputs
     nSecs = floor(size(data,2)./fs);  % duration of data matrix, in seconds
@@ -52,11 +52,11 @@ else
 end
 
 
-nChan = size(data,1);  % number of EEG channels
-SEF = nan(nEpochs,nChan);
+nChans = size(data,1);  % number of EEG channels
+SEF = nan(nEpochs,nChans);
 
 % or define the variables one by one
-[deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(nEpochs,nChan));
+[deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(nEpochs,nChans));
 
 
 % Set 55 Hz cutoff for SEF calculation
@@ -75,12 +75,18 @@ bandPowers = struct('delta', deltaDB, 'theta', thetaDB, 'alpha', alphaDB, 'beta'
 % For each epoch, calculate the power spectrum
 for epochInd = 1:nEpochs
     %% Select epoch
-    if nargin >3
-        startInd = startignIndices(epochInd);
-        stopInd = startignIndices(epochInd)+epochLength*fs-1;
+    if nargin == 4
+        startInd = startingIndices(epochInd);
+        stopInd = startingIndices(epochInd)+epochLength*fs-1;
     else
         startInd = (epochInd-1)*(epochLength*fs)+1;
         stopInd = (epochInd*epochLength*fs);
+    end
+
+    % Ensure indices are within bounds
+    if stopInd > size(data, 2)
+        % stopInd = size(data, 2);
+        break; % Exit the loop, because I don't want info from an epoch size that is shorter than others
     end
 
 
@@ -89,7 +95,7 @@ for epochInd = 1:nEpochs
     % Apply windowing function to epoch of EEG data
     %% VENUS CHECK THIS, I HAVEN'T DEBUGGED IT
     win = hann(stopInd-startInd+1);  % create hanning window based on number of time points in eegEpoch
-    eegEpochWin = repmat(win,1,nChan).*eegEpoch;  % apply window to EEG in each channel
+    eegEpochWin = repmat(win,1,nChans).*eegEpoch;  % apply window to EEG in each channel
 
 
     % Calculate FFT and EEG power
