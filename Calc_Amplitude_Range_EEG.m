@@ -1,4 +1,4 @@
-function [ampMatrix] = Calc_Amplitude_Range_EEG(data, fs,startingIndices)
+function [ampMatrix] = Calc_Amplitude_Range_EEG(data, fs,epochLength,startingIndices)
 % Outputs a matrix of all amplitude values for each one second window,
 % calculated using the range (peak-to-peak).
 % If artifactual epochs need to be removed, they can be identified using
@@ -29,7 +29,7 @@ function [ampMatrix] = Calc_Amplitude_Range_EEG(data, fs,startingIndices)
 nChan = size(data,1);  % number of EEG channels
 nSamps = size(data,2);  % number of samples (time)
 
-if nargin > 3
+if nargin > 2
     nSecs = length(startingIndices);
 else
     % Initialize variables for outputs
@@ -52,7 +52,7 @@ ampMatrix = nan(nChan,nSecs);
 
 % Loop through all 1-second windows
 for win=1:nSecs
-    if  nargin > 3
+    if  nargin > 2
        startInd = startingIndices(win);
         stopInd = startingIndices(win)+epochLength*fs-1;
     else
