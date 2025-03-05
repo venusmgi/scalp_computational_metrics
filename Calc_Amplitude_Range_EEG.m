@@ -29,7 +29,7 @@ function [ampMatrix] = Calc_Amplitude_Range_EEG(data, fs,epochLength,startingInd
 nChan = size(data,1);  % number of EEG channels
 nSamps = size(data,2);  % number of samples (time)
 
-if nargin > 2
+if nargin == 4
     nSecs = length(startingIndices);
 else
     % Initialize variables for outputs
@@ -52,7 +52,7 @@ ampMatrix = nan(nChan,nSecs);
 
 % Loop through all 1-second windows
 for win=1:nSecs
-    if  nargin > 2
+    if  nargin == 4 
        startInd = startingIndices(win);
         stopInd = startingIndices(win)+epochLength*fs-1;
     else
