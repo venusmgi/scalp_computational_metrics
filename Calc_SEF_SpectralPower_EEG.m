@@ -97,17 +97,16 @@ for epochInd = 1:nEpochs
     win = hann(stopInd-startInd+1);  % create hanning window based on number of time points in eegEpoch
     eegEpochWin = repmat(win,1,nChans).*eegEpoch;  % apply window to EEG in each channel
 
-
     % Calculate FFT and EEG power
     fftVals = fft(eegEpochWin);
 
     % Calculate power; dimension is # frequencies x # channels
-    powerVals = abs(fftVals).^2/fs;  %normalization of fft by fs, we're essentially scaling our discrete spectrum to match the continuous spectrum.
+    powerVals = abs(fftVals).^2; 
     powerVals = powerVals(1:length(powerVals)/2+1, :);  % remove negative frequencies (two-sided power to one-sided power)
     powerVals(2:end-1) = 2*powerVals(2:end-1); % doubling the power except for DC and Nyquist
 
     % Calculate SEF
-    SEF(epochInd,:) = Calc_SEF(powerVals,cutoff);  % dimension is 1 x channels
+    SEF(epochInd,:) = Calc_SEF(powerVals,fs,cutoff);  % dimension is 1 x channels
 
     % Calculate power in each frequency band
 
@@ -124,18 +123,35 @@ return
 
 %% do we want to turn SEF ro decible as well?
 % Function to calculate SEF for one epoch
-function SEF = Calc_SEF(powerVals, cutoff)
+function SEF = Calc_SEF(powerVals,fs, cutoff)
 % CALC_SEF Calculates the Spectral Edge Frequency (SEF) for one epoch
 %
 % Inputs:
 %   powerVals - Matrix of FFT values, frequencies x channels
 %   cutoff  - Index corresponding to the maximum frequency to consider (e.g., 55 Hz)
+%   fs  - Sampling frequency (e.g. 200Hz)
 %
 % Output:
 %   SEF     - Spectral Edge Frequency for each channel (95th percentile)
 
 powerSpec = powerVals(1:cutoff,:);  % frequencies (up to 55 Hz) x channels
-SEF = prctile(powerSpec,95,1); % calculate 95th percentile for each column
+
+% Define frequency range from 0 to 55 Hz
+frequencies = linspace(0, fs/2, length(powerVals)); %% DR.LOPOUR, shouldn't i have up to 55 Hz instead of fs/2?
+
+% Calculate the cumulative sum of the power spectrum
+cumulativePower = cumsum(powerSpec);
+
+% Normalize the cumulative power to create a cumulative distribution function (CDF)
+cumulativePowerCDF = cumulativePower / cumulativePower(end);
+
+% Find the index where the CDF reaches or exceeds the 95th percentile
+percentileIndex = find(cumulativePowerCDF >= 0.95, 1);
+
+% Find the frequency corresponding to this index
+SEF = frequencies(percentileIndex);
+
+
 return
 
 %% I can also define it as below:
@@ -192,17 +208,11 @@ else
 end
 
 % Convert power to power spectral density
-N = length(win);
-S = sum(win.^2)/N;  % scaling factor based on hanning window function
-%% the 2 is not needed because we are already working with one side
-%     psdEEG = (2/(fs*S))*powerMat;
+S = sum(win.^2);  % scaling factor based on hanning window function
 psdEEG = powerMat /( fs * S);  % Divide by fs and multiply by scaling factor to obtain power spectral density (power/Hz)
-
-% calculate the frequency resolution
-df = fs/N;
 
 % Calculate total power in the desired frequency band and convert to
 % decibels
-powerLinear = sum(psdEEG,1)*df;  % calculate the area; sum the power and multiply by the frequency increment
+powerLinear = trapz(psdEEG,1);  % calculate the area; 
 powerDecibel = 10*log10(powerLinear);  % convert total power to decibels
 return
