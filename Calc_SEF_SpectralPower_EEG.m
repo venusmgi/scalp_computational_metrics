@@ -11,18 +11,6 @@ function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower_E
 %   deltaDB    - power of signgla in the delta band
 %   bandPowers  - Structure containing power in different frequency bands
 %
-% Author: Venus Mostaghimi
-% Date: 1.08.2025
-% Version: 2.0
-
-
-% Inputs:   data: EEG data, channels x time
-%           fs: Sampling rate
-%           epochLength: Epoch length (seconds, default 5)
-% Outputs:  freq95: Spectral edge frequency value for each channel
-%           powerMatFull: Matrix containing the Spectral edge frequency
-%                         values for each channel up to 55 Hz
-%
 % Previously called: "calculateSEF_UCB.m"
 % Code used in Smith et al. 2021
 % Rachel J. Smith (Lopouratory 2019)
@@ -68,13 +56,9 @@ thetaInd = Find_Freq_Ind([4 8],epochLength);
 alphaInd = Find_Freq_Ind([8 13],epochLength);
 betaInd = Find_Freq_Ind([13 30],epochLength);
 
-
-%% I can also define this as a struct:
-bandPowers = struct('delta', deltaDB, 'theta', thetaDB, 'alpha', alphaDB, 'beta', betaDB, 'broad', broadDB);
-
 % For each epoch, calculate the power spectrum
 for epochInd = 1:nEpochs
-    %% Select epoch
+    % Select epoch
     if nargin == 4
         startInd = startingIndices(epochInd);
         stopInd = startingIndices(epochInd)+epochLength*fs-1;
@@ -93,7 +77,6 @@ for epochInd = 1:nEpochs
     eegEpoch = data(:,startInd:stopInd)'; % transpose data so each channel is in a column
 
     % Apply windowing function to epoch of EEG data
-    %% VENUS CHECK THIS, I HAVEN'T DEBUGGED IT
     win = hann(stopInd-startInd+1);  % create hanning window based on number of time points in eegEpoch
     eegEpochWin = repmat(win,1,nChans).*eegEpoch;  % apply window to EEG in each channel
 
@@ -120,8 +103,7 @@ for epochInd = 1:nEpochs
 end
 
 return
-
-%% do we want to turn SEF ro decible as well?
+%% Functions
 % Function to calculate SEF for one epoch
 function SEF = Calc_SEF(powerVals,fs, cutoff)
 % CALC_SEF Calculates the Spectral Edge Frequency (SEF) for one epoch
@@ -137,7 +119,7 @@ function SEF = Calc_SEF(powerVals,fs, cutoff)
 powerSpec = powerVals(1:cutoff,:);  % frequencies (up to 55 Hz) x channels
 
 % Define frequency range from 0 to 55 Hz
-frequencies = linspace(0, fs/2, length(powerVals)); %% DR.LOPOUR, shouldn't i have up to 55 Hz instead of fs/2?
+frequencies = linspace(0, fs/2, length(powerVals)); 
 
 % Calculate the cumulative sum of the power spectrum
 cumulativePower = cumsum(powerSpec);
@@ -146,7 +128,7 @@ cumulativePower = cumsum(powerSpec);
 cumulativePowerCDF = cumulativePower / cumulativePower(end);
 
 % Find the index where the CDF reaches or exceeds the 95th percentile
-percentileIndex = find(cumulativePowerCDF >= 0.95, 1);
+[~,percentileIndex] = min(abs(cumulativePowerCDF-0.95));
 
 % Find the frequency corresponding to this index
 SEF = frequencies(percentileIndex);
@@ -154,8 +136,6 @@ SEF = frequencies(percentileIndex);
 
 return
 
-%% I can also define it as below:
-% Calc_SEF = @(powerVals, cutoff) prctile(powerVals(1:cutoff,:), 95, 1);
 
 
 % Function to find the index for a specific frequency value associated with the fft
@@ -176,10 +156,10 @@ fInd = floor(freq * epochLength);
 % Alternative2 calculation for readability:
 % nyqF = fs/2;
 % fInd = floor((freq * nyqF * epochLength) / nyqF)
+% Alternative 3
+% Find_Freq_Ind = @(freq, epochLength) floor(freq*epochLength)
 return
 
-%% I can also define it as below:
-% Find_Freq_Ind = @(freq, epochLength) floor(freq*epochLength)
 
 function powerDecibel = Calc_Total_Power(powerVals, freqInd, fs, win)
 % CALC_TOTAL_POWER Calculates the total power in a specified frequency band
