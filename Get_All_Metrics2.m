@@ -6,53 +6,87 @@ clear all;close all;clc;
 dataDir = 'D:\Venus\Lab projects\PERF\UCB short clips';
 phase = {'Pre','Post'};
 status = {'Sleep1','Sleep2','Wake1','Wake2'};
+headerName = 'reordered_hdr';
+eegRecordName = 'reordered_record';
+frequency = 'frequency';
+
+desired_channel = 'Cz';
+
+boxSize = 1;
+order = 4;
+delay = 1;
 
 
-Cz = 18;
 
 for p = 1: length(phase)
-    phaseDir = [dataDir '\' phase{p}];
+
     for s = 1:length(status)
-        currentDir = [phaseDir '\' status{s}];
-        addpath(currentDir)
+
+        currentDir = [dataDir '\' phase{p} '\' status{s}];
         count = 0;
         EEG_metric2 = {};
         fileNames = {};
-        fileList = dir(fullfile(currentDir, '*.mat'));
+        fileList = dir(fullfile(currentDir, '*.mat')); %reading the names of all .mat files
+
         for f = 1:length(fileList)
-            count = count+ 1;
             patientMetrics = struct();
-            fileNames{count,1} = fileList(f).name; % getting the name of the file we are analyzing
             
-            load(fileList(f).name)
-            fs = reordered_hdr.frequency(1);
+            fileNames{f,1} = fileList(f).name; % getting the name of the file we are analyzing
+            
+            %loading EEG signal and EEG header
+            loadedData = load(fileList(f).name); % doesn't need to specify the path any more Load(currentDir ‘\’ fileNames{f}) 
+            recordEEG = loadedData.(eegRecordName);
+            hdrEEG = loadedData.(headerName);
+            
+            % finding the location of the desired channel
+            [~,channel] = max(strcmp(hdrEEG.label,desired_channel));
+
+            fs = unique(hdrEEG.(frequency));
             %Amplitude and Power Specral Density and SEF
             filterType = 'broadband';
             rereferenceMethod = 'EAR';
             artifactDetection = 'True';
             epochLength = 30; %% do this once and then use this for the rest of the code
-
-
-            [filteredEEG,startingIndCleanEpoch] = Rereference_Filter_DetectArts(reordered_record,reordered_hdr,rereferenceMethod,filterType,epochLength,artifactDetection);
-            stopingIndCleanEpoch = startingIndCleanEpoch + epochLength * fs - 1;
-            num30SecEpochs = length(startingIndCleanEpoch);
+            rerefEEG = Rereference_EEG(recordEEG, hdrEEG, rereferenceMethod);
+            filteredEEG = Filter_EEG(rerefEEG, fs, filterType);
+            epochStart = Find_Clean_Indices(filteredEEG,fs, epochLength)';
+            epochStop = epochStart + epochLength * fs - 1;
+            numLargeEpochs = length(epochStart);
 
 
             %% Amplitude
-            amp = nan(num30SecEpochs,1);
-            for epochId = 1:num30SecEpochs
-                newEpochLength = 1;
-                amp(epochId,1) = median(Calc_Amplitude_Range_EEG (filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)), fs,newEpochLength));
+            
+            % % subEpochLength = 1;
+            % % newStartIdx = Get_Sub_Clean_Epochs(epochStart, fs, epochLength, subEpochLength);
+            % % newStopIdx = newStartIdx+fs*subEpochLength-1;
+            % % amp = Calc_Amplitude_Range_EEG (filteredEEG(Cz,:), fs,subEpochLength,newStartIdx)';
+
+
+            amp = nan(numLargeEpochs,1);
+            for epochId = 1:numLargeEpochs
+                amp(epochId,1) = median(Calc_Amplitude_Range_EEG (filteredEEG(Cz,epochStart(epochId):epochStop(epochId)), fs,subEpochLength));
             end
             
-            amplitude_matrix = [amp,startingIndCleanEpoch,stopingIndCleanEpoch];
-            patientMetrics.amplitude = amplitude_matrix;
+            
+            patientMetrics.amplitude = [amp,epochStart,epochStop];
 
             %% Power Specral Density and SEF
-            [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(num30SecEpochs,1));
 
-            for epochId = 1:num30SecEpochs
-                [tempSEF,tempDeltaDB,tempThetaDB,tempAlphaDB,tempBetaDB,tempBroadDB] = Calc_SEF_SpectralPower_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,newEpochLength);  
+            % % subEpochLength = 5;
+            % % newStartIdx = Get_Sub_Clean_Epochs(epochStart, fs, epochLength, subEpochLength);
+            % % newStopIdx = newStartIdx+fs*subEpochLength-1;
+            % % [SEF,DeltaDB,ThetaDB,AlphaDB,BetaDB,BroadDB] = Calc_SEF_SpectralPower_EEG(filteredEEG(Cz,:),fs,subEpochLength,newStartIdx);
+            % % % SEF= median(reshape(SEF,6,[]),1);
+            % % % deltaDB = median(reshape(DeltaDB,6,[]),1);
+            % % % thetaDB = median(reshape(ThetaDB,6,[]),1);
+            % % % alphaDB= median(reshape(AlphaDB,6,[]),1);
+            % % % betaDB = median(reshape(BetaDB,6,[]),1);
+            % % % broadDB = median(reshape(BroadDB,6,[]),1);
+
+            subEpochLength = 5;
+            [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(numLargeEpochs,1));
+            for epochId = 1:numLargeEpochs
+                [tempSEF,tempDeltaDB,tempThetaDB,tempAlphaDB,tempBetaDB,tempBroadDB] = Calc_SEF_SpectralPower_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,subEpochLength);  
 
                 SEF(epochId,:) = median(tempSEF);
                 deltaDB(epochId,:) = median(tempDeltaDB);
@@ -64,76 +98,72 @@ for p = 1: length(phase)
             end
 
             
-            patientMetrics.psdSEF = [SEF,startingIndCleanEpoch,stopingIndCleanEpoch];
-            patientMetrics.deltaPSD = [deltaDB,startingIndCleanEpoch,stopingIndCleanEpoch];
-            patientMetrics.thetaPSD = [thetaDB,startingIndCleanEpoch,stopingIndCleanEpoch];
-            patientMetrics.alphaPSD = [alphaDB,startingIndCleanEpoch,stopingIndCleanEpoch];
-            patientMetrics.betaPSD = [betaDB,startingIndCleanEpoch,stopingIndCleanEpoch];
-            patientMetrics.broadPSD = [broadDB,startingIndCleanEpoch,stopingIndCleanEpoch];
+            patientMetrics.psdSEF = [SEF,epochStart,epochStop];
+            patientMetrics.deltaPSD = [deltaDB,epochStart,epochStop];
+            patientMetrics.thetaPSD = [thetaDB,epochStart,epochStop];
+            patientMetrics.alphaPSD = [alphaDB,epochStart,epochStop];
+            patientMetrics.betaPSD = [betaDB,epochStart,epochStop];
+            patientMetrics.broadPSD = [broadDB,epochStart,epochStop];
 
            %% Entropies 
-            newEpochLength = 30;
-            boxSize = 1;
-            order = 4;
-            delay = 1;
 
             % delta 
             filterType = 'delta';
-            filteredEEG = Rereference_Filter_DetectArts(reordered_record,reordered_hdr,rereferenceMethod,filterType,epochLength,'False');
+            filteredEEG = Filter_EEG(rerefEEG, fs, filterType);
             aveOptimal =631;
-            [shanEntDelta,permEntDelta] = deal(nan(num30SecEpochs,1));
-            for epochId = 1:num30SecEpochs
-                shanEntDelta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,aveOptimal,epochLength);
-                permEntDelta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,order,delay,epochLength);
+            [shanEntDelta,permEntDelta] = deal(nan(numLargeEpochs,1));
+            for epochId = 1:numLargeEpochs
+                shanEntDelta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,aveOptimal,epochLength);
+                permEntDelta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,order,delay,epochLength);
             end
 
-            patientMetrics.shanEntDelta = [shanEntDelta,startingIndCleanEpoch,stopingIndCleanEpoch];
-            patientMetrics.permEntDelta = [permEntDelta,startingIndCleanEpoch,stopingIndCleanEpoch];
+            patientMetrics.shanEntDelta = [shanEntDelta,epochStart,epochStop];
+            patientMetrics.permEntDelta = [permEntDelta,epochStart,epochStop];
 
 
 
             % theta 
             filterType = 'theta';
-            filteredEEG = Rereference_Filter_DetectArts(reordered_record,reordered_hdr,rereferenceMethod,filterType,newEpochLength,'False');
+            filteredEEG = Filter_EEG(rerefEEG, fs, filterType);
             aveOptimal =735;
-            [shanEntTheta,permEntTheta] = deal(nan(num30SecEpochs,1));
-            for epochId = 1:num30SecEpochs
-                shanEntTheta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,aveOptimal,epochLength);
-                permEntTheta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,order,delay,epochLength);
+            [shanEntTheta,permEntTheta] = deal(nan(numLargeEpochs,1));
+            for epochId = 1:numLargeEpochs
+                shanEntTheta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,aveOptimal,epochLength);
+                permEntTheta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,order,delay,epochLength);
             end
 
-             patientMetrics.shanEntTheta = [shanEntTheta,startingIndCleanEpoch,stopingIndCleanEpoch];
-             patientMetrics.permEntTheta = [permEntTheta,startingIndCleanEpoch,stopingIndCleanEpoch];
+             patientMetrics.shanEntTheta = [shanEntTheta,epochStart,epochStop];
+             patientMetrics.permEntTheta = [permEntTheta,epochStart,epochStop];
 
             % alpha 
             filterType = 'alpha';
-            filteredEEG = Rereference_Filter_DetectArts(reordered_record,reordered_hdr,rereferenceMethod,filterType,newEpochLength,'False');
+            filteredEEG = Filter_EEG(rerefEEG, fs, filterType);
             aveOptimal =1008;
-            [shanEntAlpha,permEntAlpha] = deal(nan(num30SecEpochs,1));
-            for epochId = 1:num30SecEpochs
-                shanEntAlpha(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,aveOptimal,epochLength);
-                permEntAlpha(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,order,delay,epochLength);
+            [shanEntAlpha,permEntAlpha] = deal(nan(numLargeEpochs,1));
+            for epochId = 1:numLargeEpochs
+                shanEntAlpha(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,aveOptimal,epochLength);
+                permEntAlpha(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,order,delay,epochLength);
             end
 
-             patientMetrics.shanEntAlpha = [shanEntAlpha,startingIndCleanEpoch,stopingIndCleanEpoch];
-             patientMetrics.permEntAlpha = [permEntAlpha,startingIndCleanEpoch,stopingIndCleanEpoch];
+             patientMetrics.shanEntAlpha = [shanEntAlpha,epochStart,epochStop];
+             patientMetrics.permEntAlpha = [permEntAlpha,epochStart,epochStop];
              
 
             % beta 
             filterType = 'beta';
-            filteredEEG = Rereference_Filter_DetectArts(reordered_record,reordered_hdr,rereferenceMethod,filterType,newEpochLength,'False');
+            filteredEEG = Filter_EEG(rerefEEG, fs, filterType);
             aveOptimal =1517;
-            [shanEntBeta,permEntBeta] = deal(nan(num30SecEpochs,1));
-            for epochId = 1:num30SecEpochs
-                shanEntBeta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,aveOptimal,epochLength);
-                permEntBeta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,startingIndCleanEpoch(epochId):stopingIndCleanEpoch(epochId)),fs,order,delay,epochLength);
+            [shanEntBeta,permEntBeta] = deal(nan(numLargeEpochs,1));
+            for epochId = 1:numLargeEpochs
+                shanEntBeta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,aveOptimal,epochLength);
+                permEntBeta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,order,delay,epochLength);
             end
 
-             patientMetrics.shanEntBeta = [shanEntBeta,startingIndCleanEpoch,stopingIndCleanEpoch];
-             patientMetrics.permEntBeta = [permEntBeta,startingIndCleanEpoch,stopingIndCleanEpoch];
+             patientMetrics.shanEntBeta = [shanEntBeta,epochStart,epochStop];
+             patientMetrics.permEntBeta = [permEntBeta,epochStart,epochStop];
              
 
-            EEG_metric2{count,1} = patientMetrics;
+            EEG_metric2{f,1} = patientMetrics;
         end
         % Construct the filename using sprintf
         EEG_metric_filename = sprintf('%s_%s_results.mat', status{s}, phase{p});
