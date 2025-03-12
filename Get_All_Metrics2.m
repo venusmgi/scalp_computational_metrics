@@ -87,7 +87,6 @@ for p = 1: length(phase)
             % Preprocess EEG data
             filterType = 'broadband';
             rereferenceMethod = 'EAR';
-            artifactDetection = 'True';
             epochLength = 30; % Length of the largest clean epoch in seconds
             rerefEEG = Rereference_EEG(recordEEG, hdrEEG, rereferenceMethod); % Re-reference EEG
             filteredEEG = Filter_EEG(rerefEEG, fs, filterType); % Filter EEG
@@ -100,9 +99,11 @@ for p = 1: length(phase)
 
             % % Using the Alternative Method
             % % subEpochLength = 1;
+            % % epochRatio = epochLength/subEpochLength;
             % % newStartIdx = Get_Sub_Clean_Epochs(epochStart, fs, epochLength, subEpochLength);
             % % newStopIdx = newStartIdx+fs*subEpochLength-1;
             % % amp = Calc_Amplitude_Range_EEG (filteredEEG(Cz,:), fs,subEpochLength,newStartIdx)';
+            % % amp = median(reshape(amp, epochLength,[]),1)';
 
 
             amp = nan(numLargeEpochs,1);
@@ -117,24 +118,23 @@ for p = 1: length(phase)
 
             % % Using the Alternative Method
             % % subEpochLength = 5;
+            % % epochRatio = epochLength/subEpochLength;
             % % newStartIdx = Get_Sub_Clean_Epochs(epochStart, fs, epochLength, subEpochLength);
             % % newStopIdx = newStartIdx+fs*subEpochLength-1;
             % % [SEF,DeltaDB,ThetaDB,AlphaDB,BetaDB,BroadDB] = Calc_SEF_SpectralPower_EEG(filteredEEG(Cz,:),fs,subEpochLength,newStartIdx);
-            % % % SEF= median(reshape(SEF,6,[]),1);
-            % % % deltaDB = median(reshape(DeltaDB,6,[]),1);
-            % % % thetaDB = median(reshape(ThetaDB,6,[]),1);
-            % % % alphaDB= median(reshape(AlphaDB,6,[]),1);
-            % % % betaDB = median(reshape(BetaDB,6,[]),1);
-            % % % broadDB = median(reshape(BroadDB,6,[]),1);
+            % % % SEF= median(reshape(SEF,epochRatio,[]),1);
+            % % % deltaDB = median(reshape(DeltaDB,epochRatio,[]),1);
+            % % % thetaDB = median(reshape(ThetaDB,epochRatio,[]),1);
+            % % % alphaDB= median(reshape(AlphaDB,epochRatio,[]),1);
+            % % % betaDB = median(reshape(BetaDB,epochRatio,[]),1);
+            % % % broadDB = median(reshape(BroadDB,epochRatio,[]),1);
 
 
             % Defining a smaller epoch size, that can be summed up to be
-            % the same size of the largest clean epoch size% Defining a
-            % smaller epoch size, that can be summed up to be the same
-            % size of the largest clean epoch size
+            % the same size of the largest clean epoch size
             % For example, here we are calculating the power spectral
             % densities for epochs of 5 second, and each 6 second would
-            % make a 30 secon clean epoch, which was defned abobe
+            % make a 30 secon clean epoch, which was defined above
             subEpochLength = 5;
 
             [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(numLargeEpochs,1));
