@@ -127,7 +127,7 @@ for p = 1: length(phase)
 
             amp = nan(numLargeEpochs,1);
             for epochId = 1:numLargeEpochs
-                amp(epochId,1) = median(Calc_Amplitude_Range_EEG (filteredEEG(Cz,epochStart(epochId):epochStop(epochId)), fs,subEpochLengthAmp));
+                amp(epochId,1) = median(Calc_Amplitude_Range_EEG (filteredEEG(channel,epochStart(epochId):epochStop(epochId)), fs,subEpochLengthAmp));
             end
 
             patientMetrics.amplitude = [amp,epochStart,epochStop];
@@ -136,7 +136,7 @@ for p = 1: length(phase)
 
             [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(numLargeEpochs,1));
             for epochId = 1:numLargeEpochs
-                [tempSEF,tempDeltaDB,tempThetaDB,tempAlphaDB,tempBetaDB,tempBroadDB] = Calc_SEF_SpectralPower_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,subEpochLengthPSD);
+                [tempSEF,tempDeltaDB,tempThetaDB,tempAlphaDB,tempBetaDB,tempBroadDB] = Calc_SEF_SpectralPower_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,subEpochLengthPSD);
 
                 SEF(epochId,:) = median(tempSEF);
                 deltaDB(epochId,:) = median(tempDeltaDB);
@@ -161,12 +161,12 @@ for p = 1: length(phase)
             filteredEEG = Filter_EEG(rerefEEG, fs, filterTypeDelta);
 
             % % Using the Alternative Method
-            % % shanEntDelta = Calc_ShannonEntropy_EEG(filteredEEG(Cz,:),fs,numBins,epochLength,startingIndCleanEpoch);
-            % % permEntDelta = Calc_PermutationEntropy_EEG(filteredEEG(Cz,:),fs,order,delay,epochLength,startingIndCleanEpoch);
+            % % shanEntDelta = Calc_ShannonEntropy_EEG(filteredEEG(channel,:),fs,numBinsDelta,largestEpochLength,epochStart);
+            % % permEntDelta = Calc_PermutationEntropy_EEG(filteredEEG(channel,:),fs,order,delay,largestEpochLength,epochStart);
             [shanEntDelta,permEntDelta] = deal(nan(numLargeEpochs,1));
             for epochId = 1:numLargeEpochs
-                shanEntDelta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,numBinsDelta,largestEpochLength);
-                permEntDelta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,order,delay,largestEpochLength);
+                shanEntDelta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,numBinsDelta,largestEpochLength);
+                permEntDelta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,order,delay,largestEpochLength);
             end
 
             patientMetrics.shanEntDelta = [shanEntDelta,epochStart,epochStop];
@@ -177,14 +177,14 @@ for p = 1: length(phase)
             % theta
             filteredEEG = Filter_EEG(rerefEEG, fs, filterTypeTheta);
             % % Using the Alternative Method
-            % % shanEntTheta = Calc_ShannonEntropy_EEG(filteredEEG(Cz,:),fs,numBins,epochLength,startingIndCleanEpoch);
-            % % permEntTheta = Calc_PermutationEntropy_EEG(filteredEEG(Cz,:),fs,order,delay,epochLength,startingIndCleanEpoch);
+            % % shanEntTheta = Calc_ShannonEntropy_EEG(filteredEEG(channel,:),fs,numBinsTheta,largestEpochLength,epochStart);
+            % % permEntTheta = Calc_PermutationEntropy_EEG(filteredEEG(channel,:),fs,order,delay,largestEpochLength,epochStart);
 
 
             [shanEntTheta,permEntTheta] = deal(nan(numLargeEpochs,1));
             for epochId = 1:numLargeEpochs
-                shanEntTheta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,numBinsTheta,largestEpochLength);
-                permEntTheta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,order,delay,largestEpochLength);
+                shanEntTheta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,numBinsTheta,largestEpochLength);
+                permEntTheta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,order,delay,largestEpochLength);
             end
 
             patientMetrics.shanEntTheta = [shanEntTheta,epochStart,epochStop];
@@ -193,12 +193,12 @@ for p = 1: length(phase)
             % alpha
             filteredEEG = Filter_EEG(rerefEEG, fs, filterTypeAlpha);
             % % Using the Alternative Method
-            % % shanEntAlpha = Calc_ShannonEntropy_EEG(filteredEEG(Cz,:),fs,numBins,newEpochLength,startingIndCleanEpoch);
-            % % permEntAlpha = Calc_PermutationEntropy_EEG(filteredEEG(Cz,:),fs,order,delay,newEpochLength,startingIndCleanEpoch);
+            shanEntAlpha1 = Calc_ShannonEntropy_EEG(filteredEEG(channel,:),fs,numBinsAlpha,largestEpochLength,epochStart);
+             permEntAlpha1 = Calc_PermutationEntropy_EEG(filteredEEG(channel,:),fs,order,delay,largestEpochLength,epochStart);
             [shanEntAlpha,permEntAlpha] = deal(nan(numLargeEpochs,1));
             for epochId = 1:numLargeEpochs
-                shanEntAlpha(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,numBinsAlpha,largestEpochLength);
-                permEntAlpha(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,order,delay,largestEpochLength);
+                shanEntAlpha(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,numBinsAlpha,largestEpochLength);
+                permEntAlpha(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,order,delay,largestEpochLength);
             end
 
 
@@ -209,12 +209,12 @@ for p = 1: length(phase)
             % beta
             filteredEEG = Filter_EEG(rerefEEG, fs, filterTypeBeta);
             % % Using the Alternative Method
-            % % shanEntBeta = Calc_ShannonEntropy_EEG(filteredEEG(Cz,:),fs,numBins,newEpochLength,startingIndCleanEpoch);
-            % % permEntBeta = Calc_PermutationEntropy_EEG(filteredEEG(Cz,:),fs,order,delay,newEpochLength,startingIndCleanEpoch);
+            % % shanEntBeta = Calc_ShannonEntropy_EEG(filteredEEG(channel,:),fs,numBinsBeta,largestEpochLength,epochStart);
+            % % permEntBeta = Calc_PermutationEntropy_EEG(filteredEEG(channel,:),fs,order,delay,largestEpochLength,epochStart);
             [shanEntBeta,permEntBeta] = deal(nan(numLargeEpochs,1));
             for epochId = 1:numLargeEpochs
-                shanEntBeta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,numBinsBeta,largestEpochLength);
-                permEntBeta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(Cz,epochStart(epochId):epochStop(epochId)),fs,order,delay,largestEpochLength);
+                shanEntBeta(epochId,1) = Calc_ShannonEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,numBinsBeta,largestEpochLength);
+                permEntBeta(epochId,1) = Calc_PermutationEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,order,delay,largestEpochLength);
             end
 
 
