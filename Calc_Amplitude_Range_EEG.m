@@ -6,11 +6,23 @@ function [ampMatrix] = Calc_Amplitude_Range_EEG(data, fs,epochLength,startingInd
 % removed later.
 %
 % Inputs:
-%    data: EEG data, channels x time points
-%    fs: Sampling rate
+%   data        - EEG data, channels x time points
+%   fs          - Sampling rate
+%   epochLength - Epoch length (seconds, default 5)
+%   startingIndices - (Optional) Vector of starting indices for each epoch. If not provided,
+%                     epochs are determined based on the epoch length.
+
 % Outputs:
 %    ampMatrix: matrix of all amplitude values for each one second window
 %               (channels x nSeconds)
+% Notes:
+% - The function assumes the input EEG data is already preprocessed 
+% - The function will automatically handle the calculation of epochs based on 
+%   the provided epoch length or starting indices. If starting indices are provided,
+%   they must be consistent with the epoch length to avoid overlap or gaps. 
+%   If the epoch length is larger/smaller than the distance between each 
+%   index in starting indices, then you will have over lap/gaps. 
+
 %
 % Previously called: "calculate_Amplitude_full.m"
 % Code used in Smith et al. 2021
