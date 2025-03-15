@@ -1,16 +1,32 @@
 function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower_EEG(data,fs,epochLength,startingIndices)
-% CALC_SEF_EEG_VENUS Calculates spectral edge frequency and band powers for EEG data
+% CALC_SEF_SPECTRALPOWER_EEG Calculates spectral edge frequency and band powers for EEG data
 %
 % Inputs:
 %   data        - EEG data, channels x time
 %   fs          - Sampling rate (Hz)
 %   epochLength - Epoch length (seconds, default 5)
-
-% Outputs:
-%   SEF         - Spectral edge frequency value for each channel and epoch
-%   deltaDB    - power of signgla in the delta band
-%   bandPowers  - Structure containing power in different frequency bands
+%   startingIndices - (Optional) Vector of starting indices for each epoch. If not provided,
+%                     epochs are determined based on the epoch length.
 %
+% Outputs:
+%   SEF           - Spectral Edge Frequency for each channel and epoch, representing the frequency
+%                   below which 95% of the power is contained.
+%   deltaDB       - Power of the signal in the delta band (1-4 Hz) expressed in decibels.
+%   thetaDB       - Power of the signal in the theta band (4-8 Hz) expressed in decibels.
+%   alphaDB       - Power of the signal in the alpha band (8-13 Hz) expressed in decibels.
+%   betaDB        - Power of the signal in the beta band (13-30 Hz) expressed in decibels.
+%   broadDB       - Power of the signal in the broadband (full spectrum) expressed in decibels.
+%
+% Notes:
+% - The function assumes the input EEG data is already preprocessed and ready 
+%   for spectral analysis.
+% - The function will automatically handle the calculation of epochs based on 
+%   the provided epoch length or starting indices. If starting indices are provided,
+%   they must be consistent with the epoch length to avoid overlap or gaps. 
+%   If the epoch length is larger/smaller than the distance between each 
+%   index in starting indices, then you will have over lap/gaps. 
+% - The SEF calculation uses a cutoff frequency of 55 Hz, which can be adjusted if necessary.
+
 % Previously called: "calculateSEF_UCB.m"
 % Code used in Smith et al. 2021
 % Rachel J. Smith (Lopouratory 2019)
@@ -26,26 +42,41 @@ function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower_E
 % V.2.0 :Refactored for improved readability and performance (Venus Mostaghimi, 1.08.2025)
 
 
-
-%Inpput Validation
-validateattributes(fs, {'numeric'}, {'scalar','positive'}, 'Calc_SEF_EEG_Venus', 'fs', 2)
+%Input Validation
+validateattributes(fs, {'numeric'}, {'scalar','positive'}, 'Calc_SEF_SpectralPower_EEG', 'fs', 2)
 validateattributes(epochLength, {'numeric'}, {'scalar', 'positive'}, 'Calc_SEF_EEG_Venus','epochLength',3)
 
+%vectorizing startInd and stopInd
 if nargin == 4
     nEpochs = length(startingIndices);
+    startInd = startingIndices;
+    stopInd = startingIndices+fs*epochLength-1;
+    %% QUESTION
+    % should I remove this out of the if statement and regardless
+    % of whatever it starting indecies if just put windowLength = epochLength*fs;?
+
+    windowLength = unique(stopInd-startInd+1); 
 else
-    % Initialize variables for outputs
+
     nSecs = floor(size(data,2)./fs);  % duration of data matrix, in seconds
     nEpochs = floor(nSecs./epochLength);  % number of epochs in data
+    startInd = (0:nEpochs-1)*epochLength*fs + 1;
+    stopInd = (1:nEpochs)*epochLength*fs;
+    windowLength = epochLength*fs;
 end
 
+% Ensure indices are within bounds
+if stopInd(end) > size(data, 2)
+    nEpochs = nEpochs-1;
 
+end
+
+% Initialize variables for outputs
 nChans = size(data,1);  % number of EEG channels
 SEF = nan(nEpochs,nChans);
 
 % or define the variables one by one
 [deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(nEpochs,nChans));
-
 
 % Set 55 Hz cutoff for SEF calculation
 cutoff = Find_Freq_Ind(55,epochLength);
@@ -56,35 +87,26 @@ thetaInd = Find_Freq_Ind([4 8],epochLength);
 alphaInd = Find_Freq_Ind([8 13],epochLength);
 betaInd = Find_Freq_Ind([13 30],epochLength);
 
+
+
+
+win = hann(windowLength);  % create hanning window based on number of time points in eegEpoch
+
+
 % For each epoch, calculate the power spectrum
 for epochInd = 1:nEpochs
-    % Select epoch
-    if nargin == 4
-        startInd = startingIndices(epochInd);
-        stopInd = startingIndices(epochInd)+epochLength*fs-1;
-    else
-        startInd = (epochInd-1)*(epochLength*fs)+1;
-        stopInd = (epochInd*epochLength*fs);
-    end
-
-    % Ensure indices are within bounds
-    if stopInd > size(data, 2)
-        % stopInd = size(data, 2);
-        break; % Exit the loop, because I don't want info from an epoch size that is shorter than others
-    end
 
 
-    eegEpoch = data(:,startInd:stopInd)'; % transpose data so each channel is in a column
+    eegEpoch = data(:,startInd(epochInd):stopInd(epochInd))'; % transpose data so each channel is in a column
 
     % Apply windowing function to epoch of EEG data
-    win = hann(stopInd-startInd+1);  % create hanning window based on number of time points in eegEpoch
     eegEpochWin = repmat(win,1,nChans).*eegEpoch;  % apply window to EEG in each channel
 
     % Calculate FFT and EEG power
     fftVals = fft(eegEpochWin);
 
     % Calculate power; dimension is # frequencies x # channels
-    powerVals = abs(fftVals).^2; 
+    powerVals = abs(fftVals).^2;
     powerVals = powerVals(1:length(powerVals)/2+1, :);  % remove negative frequencies (two-sided power to one-sided power)
     powerVals(2:end-1) = 2*powerVals(2:end-1); % doubling the power except for DC and Nyquist
 
@@ -92,12 +114,11 @@ for epochInd = 1:nEpochs
     SEF(epochInd,:) = Calc_SEF(powerVals,fs,cutoff);  % dimension is 1 x channels
 
     % Calculate power in each frequency band
-
-    deltaDB(epochInd,:) = Calc_Total_Power(powerVals, deltaInd, fs, win);
-    thetaDB(epochInd,:) = Calc_Total_Power(powerVals, thetaInd, fs, win);
-    alphaDB(epochInd,:) = Calc_Total_Power(powerVals, alphaInd, fs, win);
-    betaDB(epochInd,:)  = Calc_Total_Power(powerVals, betaInd, fs, win);
-    broadDB(epochInd,:) = Calc_Total_Power(powerVals, 'all', fs, win);
+    deltaDB(epochInd,:) = Calc_Band_Specific_Total_Power(powerVals, deltaInd, fs, win);
+    thetaDB(epochInd,:) = Calc_Band_Specific_Total_Power(powerVals, thetaInd, fs, win);
+    alphaDB(epochInd,:) = Calc_Band_Specific_Total_Power(powerVals, alphaInd, fs, win);
+    betaDB(epochInd,:)  = Calc_Band_Specific_Total_Power(powerVals, betaInd, fs, win);
+    broadDB(epochInd,:) = Calc_Band_Specific_Total_Power(powerVals, 'all', fs, win);
 
 
 end
@@ -119,13 +140,15 @@ function SEF = Calc_SEF(powerVals,fs, cutoff)
 powerSpec = powerVals(1:cutoff,:);  % frequencies (up to 55 Hz) x channels
 
 % Define frequency range from 0 to 55 Hz
-frequencies = linspace(0, fs/2, length(powerVals)); 
+frequencies = linspace(0, fs/2, length(powerVals));
 
 % Calculate the cumulative sum of the power spectrum
 cumulativePower = cumsum(powerSpec);
 
 % Normalize the cumulative power to create a cumulative distribution function (CDF)
 cumulativePowerCDF = cumulativePower / cumulativePower(end);
+
+
 
 % Find the index where the CDF reaches or exceeds the 95th percentile
 [~,percentileIndex] = min(abs(cumulativePowerCDF-0.95));
@@ -150,8 +173,9 @@ function fInd = Find_Freq_Ind(freq, epochLength)
 % Output:
 %   fInd        - Index corresponding to the input frequency in FFT results
 %
-fInd = floor(freq * epochLength);
+
 % Alternative1 calculation
+fInd = round(freq * epochLength)+1;
 % fInd = round(freq * N / fs) + 1;
 % Alternative2 calculation for readability:
 % nyqF = fs/2;
@@ -161,8 +185,8 @@ fInd = floor(freq * epochLength);
 return
 
 
-function powerDecibel = Calc_Total_Power(powerVals, freqInd, fs, win)
-% CALC_TOTAL_POWER Calculates the total power in a specified frequency band
+function powerDecibel = Calc_Band_Specific_Total_Power(powerVals, freqInd, fs, win)
+% CALC_BAND_SPECIFIC_TOTAL_POWER Calculates the total power in a specified frequency band
 %
 % Inputs:
 %   powerVals     - Matrix of FFT values, frequencies x channels
@@ -189,10 +213,10 @@ end
 
 % Convert power to power spectral density
 S = sum(win.^2);  % scaling factor based on hanning window function
-psdEEG = powerMat /( fs * S);  % Divide by fs and multiply by scaling factor to obtain power spectral density (power/Hz)
+psdEEG = powerMat /( fs * S);  % Divide by fs and scaling factor to obtain power spectral density (power/Hz)
 
 % Calculate total power in the desired frequency band and convert to
 % decibels
-powerLinear = trapz(psdEEG,1);  % calculate the area; 
+powerLinear = trapz(psdEEG,1);  % calculate the area;
 powerDecibel = 10*log10(powerLinear);  % convert total power to decibels
 return
