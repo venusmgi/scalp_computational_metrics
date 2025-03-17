@@ -18,13 +18,13 @@ function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower_E
 %   broadDB       - Power of the signal in the broadband (full spectrum) expressed in decibels.
 %
 % Notes:
-% - The function assumes the input EEG data is already preprocessed and ready 
+% - The function assumes the input EEG data is already preprocessed and ready
 %   for spectral analysis.
-% - The function will automatically handle the calculation of epochs based on 
+% - The function will automatically handle the calculation of epochs based on
 %   the provided epoch length or starting indices. If starting indices are provided,
-%   they must be consistent with the epoch length to avoid overlap or gaps. 
-%   If the epoch length is larger/smaller than the distance between each 
-%   index in starting indices, then you will have over lap/gaps. 
+%   they must be consistent with the epoch length to avoid overlap or gaps.
+%   If the epoch length is larger/smaller than the distance between each
+%   index in starting indices, then you will have over lap/gaps.
 % - The SEF calculation uses a cutoff frequency of 55 Hz, which can be adjusted if necessary.
 
 % Previously called: "calculateSEF_UCB.m"
@@ -55,7 +55,7 @@ if nargin == 4
     % should I remove this out of the if statement and regardless
     % of whatever it starting indecies if just put windowLength = epochLength*fs;?
 
-    windowLength = unique(stopInd-startInd+1); 
+    windowLength = unique(stopInd-startInd+1);
 else
 
     nSecs = floor(size(data,2)./fs);  % duration of data matrix, in seconds
@@ -73,10 +73,10 @@ end
 
 % Initialize variables for outputs
 nChans = size(data,1);  % number of EEG channels
-SEF = nan(nEpochs,nChans);
+SEF = nan(nChans,nEpochs);
 
 % or define the variables one by one
-[deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(nEpochs,nChans));
+[deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(nChans,nEpochs));
 
 % Set 55 Hz cutoff for SEF calculation
 cutoff = Find_Freq_Ind(55,epochLength);
@@ -94,32 +94,33 @@ win = hann(windowLength);  % create hanning window based on number of time point
 
 
 % For each epoch, calculate the power spectrum
-for epochInd = 1:nEpochs
+for chann = 1:nChans
 
+    for epochInd = 1:nEpochs
+        eegEpochtest(chann,epochInd,:) = data(chann,startInd(epochInd):stopInd(epochInd))'; 
 
-    eegEpoch = data(:,startInd(epochInd):stopInd(epochInd))'; % transpose data so each channel is in a column
+        eegEpoch = data(chann,startInd(epochInd):stopInd(epochInd))'; % transpose data so each channel is in a column
+        % Apply windowing function to epoch of EEG data
+        eegEpochWin =win.*eegEpoch;  % apply window to EEG in each channel
 
-    % Apply windowing function to epoch of EEG data
-    eegEpochWin = repmat(win,1,nChans).*eegEpoch;  % apply window to EEG in each channel
+        % Calculate FFT and EEG power
+        fftVals = fft(eegEpochWin);
 
-    % Calculate FFT and EEG power
-    fftVals = fft(eegEpochWin);
+        % Calculate power; dimension is # frequencies x # channels
+        powerVals = abs(fftVals).^2;
+        powerVals = powerVals(1:length(powerVals)/2+1, :);  % remove negative frequencies (two-sided power to one-sided power)
+        powerVals(2:end-1) = 2*powerVals(2:end-1); % doubling the power except for DC and Nyquist
 
-    % Calculate power; dimension is # frequencies x # channels
-    powerVals = abs(fftVals).^2;
-    powerVals = powerVals(1:length(powerVals)/2+1, :);  % remove negative frequencies (two-sided power to one-sided power)
-    powerVals(2:end-1) = 2*powerVals(2:end-1); % doubling the power except for DC and Nyquist
+        % Calculate SEF
+        SEF(chann,epochInd) = Calc_SEF(powerVals,fs,cutoff);  % dimension is 1 x channels
 
-    % Calculate SEF
-    SEF(epochInd,:) = Calc_SEF(powerVals,fs,cutoff);  % dimension is 1 x channels
-
-    % Calculate power in each frequency band
-    deltaDB(epochInd,:) = Calc_Band_Specific_Total_Power(powerVals, deltaInd, fs, win);
-    thetaDB(epochInd,:) = Calc_Band_Specific_Total_Power(powerVals, thetaInd, fs, win);
-    alphaDB(epochInd,:) = Calc_Band_Specific_Total_Power(powerVals, alphaInd, fs, win);
-    betaDB(epochInd,:)  = Calc_Band_Specific_Total_Power(powerVals, betaInd, fs, win);
-    broadDB(epochInd,:) = Calc_Band_Specific_Total_Power(powerVals, 'all', fs, win);
-
+        % Calculate power in each frequency band
+        deltaDB(chann,epochInd) = Calc_Band_Specific_Total_Power(powerVals, deltaInd, fs, win);
+        thetaDB(chann,epochInd) = Calc_Band_Specific_Total_Power(powerVals, thetaInd, fs, win);
+        alphaDB(chann,epochInd) = Calc_Band_Specific_Total_Power(powerVals, alphaInd, fs, win);
+        betaDB(chann,epochInd)  = Calc_Band_Specific_Total_Power(powerVals, betaInd, fs, win);
+        broadDB(chann,epochInd) = Calc_Band_Specific_Total_Power(powerVals, 'all', fs, win);
+    end
 
 end
 
