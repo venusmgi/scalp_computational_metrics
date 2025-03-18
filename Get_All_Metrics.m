@@ -50,7 +50,7 @@ status = {'Sleep1', 'Sleep2', 'Wake1', 'Wake2'};  % Different states or conditio
 headerName = 'reordered_hdr';  % Variable name for EEG header in .mat files
 eegRecordName = 'reordered_record';  % Variable name for EEG data in .mat files
 frequency = 'frequency';  % Field name for sampling frequency in header
-desired_channel = {'Cz','Fz'};  % Channel of interest for analysis, make sure it is in a {}
+desired_channel = {'Cz'};  % Channel of interest for analysis, make sure it is in a {}
  % number of channels we are analyzing
 
 
@@ -196,8 +196,8 @@ for p = 1: length(phase)
             % alpha
             filteredEEG = Filter_EEG(rerefEEG, fs, filterTypeAlpha);
             % % Using the Alternative Method
-            shanEntAlpha1 = Calc_ShannonEntropy_EEG(filteredEEG(channel,:),fs,numBinsAlpha,largestEpochLength,epochStart);
-             permEntAlpha1 = Calc_PermutationEntropy_EEG(filteredEEG(channel,:),fs,order,delay,largestEpochLength,epochStart);
+            % shanEntAlpha = Calc_ShannonEntropy_EEG(filteredEEG(channel,:),fs,numBinsAlpha,largestEpochLength,epochStart);
+            % permEntAlpha = Calc_PermutationEntropy_EEG(filteredEEG(channel,:),fs,order,delay,largestEpochLength,epochStart);
             [shanEntAlpha,permEntAlpha] = deal(nan(numLargeEpochs,numChanns));
             for epochId = 1:numLargeEpochs
                 shanEntAlpha(epochId,:) = Calc_ShannonEntropy_EEG(filteredEEG(channel,epochStart(epochId):epochStop(epochId)),fs,numBinsAlpha,largestEpochLength);
@@ -225,6 +225,10 @@ for p = 1: length(phase)
 
             % Store metrics for each patient
             eegComputationalMetrics{f,1} = patientMetrics;
+
+
+
+
         end
         % Construct the filename using sprintf
         eegMetricFilename = sprintf('%s_%s_results.mat', status{s}, phase{p});
