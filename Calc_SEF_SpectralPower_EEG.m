@@ -176,12 +176,12 @@ function fInd = Find_Freq_Ind(freq, epochLength)
 %
 
 % Alternative1 calculation
-fInd = floor(freq * epochLength); %This method has the smallest error
+fInd = round(freq * epochLength)+1; %This method has the smallest error
 % Alternative2 calculation for readability:
 % nyqF = fs/2;
-% fInd = floor((freq * nyqF * epochLength) / nyqF)
+% fInd = round((freq * nyqF * epochLength) / nyqF)+1;
 % Alternative 3
-% Find_Freq_Ind = @(freq, epochLength) floor(freq*epochLength)
+% Find_Freq_Ind = @(freq, epochLength) round(freq*epochLength)+1
 return
 
 
