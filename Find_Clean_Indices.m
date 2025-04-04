@@ -1,4 +1,4 @@
-function [indices] = Find_Clean_Indices(EEG_record,fs, clean_epoch_duration_in_second)
+function indices = Find_Clean_Indices(EEGDuration,fs,autoArts,cleanEpochDuration)
 
 % FIND_CLEAN_INDICES Identifies clean epochs in an EEG recording
 %
@@ -6,50 +6,49 @@ function [indices] = Find_Clean_Indices(EEG_record,fs, clean_epoch_duration_in_s
 % periods free of artifacts.
 %
 % Inputs:
-%   EEG_record - The EEG data (channels x time points)
+%   EEGDuration - Duration of the EEG data in data points
 %   fs - Sampling frequency in Hz
-%   clean_epoch_duration_in_second - Duration of desired clean epochs in seconds
+%   autoArts - artifact times; this is the output of the
+%              get_automatedArtifacts_EEG function
+%   cleanEpochDuration - Duration of desired clean epochs in seconds
 %
 % Output:
 %   indices - Start indices of clean epochs
 
-% Parameters for artifact detection
-stdAbove = 7.5;        % Standard deviation threshold for artifact detection
-buffer = 0.9;          % Buffer around detected artifacts (in seconds)
-channelsInvolved = 1;  % Number of channels that must exceed threshold for artifact detection
-
-% Get the total duration of the EEG recording
-EEG_dur = size(EEG_record, 2);
-
-% Detect artifacts using the automated artifact detection function
-autoArts = get_automatedArtifacts_EEG(EEG_record, fs, stdAbove, buffer, channelsInvolved);
-
 % Create a binary vector representing artifacts (1 = artifact, 0 = clean)
-binArts = zeros(EEG_dur, 1);
-artInd = nan(size(autoArts.times,1),2);
+binArts = zeros(EEGDuration, 1);
 for i = 1:size(autoArts.times,1)
+    %% previoulsy it used to be 
     artStart = max(1, round(autoArts.times(i, 1) * fs));
-    artEnd = min(EEG_dur, round(autoArts.times(i, 2) * fs));
-    artInd(i,:) = [artStart,artEnd]; % Note: artifacts are not necessarily in sequential order; shouldn't matter here
-    binArts(artStart:artEnd) = 1;
+    %% is there a reason for changing this
+    % artStart = round(autoArts.times(i, 1)*fs)+1;
+   
+    %% Also this previously used to be: 
+     artEnd = min(EEGDuration, round(autoArts.times(i, 2) * fs));
+     %% is there a reason for changing this
+     % artEnd = min(EEGDuration, round(autoArts.times(i, 2)*fs+1));
+     %% if we want to add the +1 isn't it better to do 
+    % artEnd = min(EEGDuration, floor(autoArts.times(i, 2)*fs+1));
+
+    binArts(artStart:artEnd) = 1; % Note: artifacts are not necessarily in sequential order; shouldn't matter here
 end
 
 % Initialize variables for clean epoch detection
-clean_epoch_samples = floor(clean_epoch_duration_in_second * fs);
-count = 0;
-indices = [];
+cleanEpochSamples = floor(cleanEpochDuration*fs);  % duration of clean epoch in samples
+count = 0;  % counter used to measure duration of clean segment
+indices = [];  % start indices of clean epochs
 
 % Iterate through the binary artifact vector to find clean epochs
-for i = 1:EEG_dur
-    if binArts(i) == 0  % Clean sample
-        count = count + 1;
-        if count == clean_epoch_samples %f mod(count, clean_epoch_samples)==0
-            indices(end+1) = i - clean_epoch_samples + 1;
-            count = 0;
+for i = 1:EEGDuration
+    if binArts(i) == 0  % If it is a clean sample
+        count = count + 1;  % add one to counter
+        if count == cleanEpochSamples % if we have enough sequential clean samples
+            indices(end+1,1) = i - cleanEpochSamples + 1;  % add starting index to vector
+            count = 0;  % reset duration of clean segment to zero
         end
     else  % Artifact detected
-        count = 0;
+        count = 0;  % reset duration of clean segment to zero
     end
 end
 
-end
+return
