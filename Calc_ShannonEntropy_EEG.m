@@ -54,7 +54,7 @@ function entropy = Calc_ShannonEntropy_EEG(data,fs,aveOptimal,epochLength,starti
             end
             
             % Calculate histogram and probabilities
-            [N, ~] = hist(data(chan, startInd:stopInd), aveOptimal);
+            [N, ~] = histcounts(round(data(chan, startInd:stopInd),4), aveOptimal);
             probs = N ./ sum(N);
             entVal = -sum(probs .* log2(probs + eps));
             
