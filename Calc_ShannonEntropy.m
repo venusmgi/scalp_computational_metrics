@@ -1,4 +1,4 @@
-function entropy = Calc_ShannonEntropy_EEG(data,fs,nBins,epochLength,startingIndices)
+function entropy = Calc_ShannonEntropy(data,fs,nBins,epochLength,startingIndices)
 
 % Calculates the Shannon entropy value for each channel.
 %
