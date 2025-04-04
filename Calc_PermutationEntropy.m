@@ -1,4 +1,4 @@
-function permEnt = Calc_PermutationEntropy_EEG(data,fs,order,delay,epochLength,startingIndices)
+function permEnt = Calc_PermutationEntropy(data,fs,order,delay,epochLength,startingIndices)
 % Calculates the Permutation Entropy for all EEG channels and epochs.
 %
 % Inputs:
