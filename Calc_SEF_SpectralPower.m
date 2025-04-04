@@ -1,4 +1,4 @@
-function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower_EEG(data,fs,epochLength,startingIndices)
+function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower(data,fs,epochLength,startingIndices)
 % CALC_SEF_SPECTRALPOWER_EEG Calculates spectral edge frequency and band powers for EEG data
 %
 % Inputs:
