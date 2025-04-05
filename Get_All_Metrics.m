@@ -52,6 +52,10 @@ headerName = 'reordered_hdr';  % Variable name for EEG header in .mat files
 eegRecordName = 'reordered_record';  % Variable name for EEG data in .mat files
 frequencyName = 'frequency';  % Field name for sampling frequency in header
 
+% Desired channel order to have when uploading the .mat file
+desiredChannelOrder =  {'Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1',...
+    'O2','F7','F8','T3','T4','T5','T6','Fz','Cz','Pz','A1','A2'};
+
 % EEG channels to include in the analysis; write the list in a cell {}
 channelsToAnalyze = {'Cz', 'Fz'};
 % channelsToAnalyze = {'Cz'};
@@ -74,7 +78,9 @@ buffer = 0.9;          % Buffer around detected artifacts (in seconds)
 nArtChans = 1;         % Number of channels that must exceed threshold for artifact detection
 
 % Parameters for amplitude, SEF and power spectral density calculation
-rereferenceMethod = 'EAR';  % choose 'EAR' for linked ears or 'CAR' for common average reference
+rereferenceMethod = 'EAR';  % choose 'EAR' for linked ears,'CAR' for common average
+% 'bipolar' for  longitudinal bipolar, or any channel name in the "desiredChannelOrder" for single
+% channel referencing
 
 % Parameters for permutation entropy calculations
 boxSize = 1;
@@ -123,6 +129,10 @@ for p = 1:length(phase)
             recordEEG = loadedData.(eegRecordName);
             hdrEEG = loadedData.(headerName);
 
+            %check if the EEG is standerdizded, and if not, the function
+            %will throw an error
+            Check_EEG_Standardization (desiredChannelOrder, hdrEEG)
+
             % Find the index of each channel that will be analyzed
             nChan = length(channelsToAnalyze);
             chanVec = nan(1,nChan);
@@ -138,7 +148,10 @@ for p = 1:length(phase)
             end
             
             % Extract the sampling rate and EEG duration
-            fs = unique(hdrEEG.(frequencyName));
+            fs = unique(hdrEEG.(frequencyName)(channelLoc)); % I added the unique in case we ad multiple channels selected
+            if length(unique(hdrEEG.(frequencyName))) ~= 1
+                error ("The upploaded file has multiple sample rates (fs), Plkease make sure that the file is ampled with a single frequency")
+            end
             N = size(recordEEG,2);
 
             % Re-reference EEG
