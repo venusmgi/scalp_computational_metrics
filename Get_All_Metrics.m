@@ -157,18 +157,9 @@ for p = 1:length(phase)
             % Re-reference EEG
             rerefEEG = Rereference_EEG(recordEEG, hdrEEG, rereferenceMethod); 
 
-
-                 
-            %% Why are we applying the filter after detecting the artifact? we decided to do it after filtering
-
-
             % Detect artifacts using the automated artifact detection function
             % NOTE: Input unfiltered EEG; function contains filtering
-            % autoArts = get_automatedArtifacts_EEG(rerefEEG, fs, stdAbove, buffer, nArtChans);
-
-             %%
-            filteredEEG = Filter_EEG(rerefEEG, fs, 'broadband'); % Apply broadband filter to EEG
-            autoArts = get_automatedArtifacts_EEG(filteredEEG, fs, stdAbove, buffer, nArtChans);
+            autoArts = get_automatedArtifacts_EEG(rerefEEG, fs, stdAbove, buffer, nArtChans);
 
             epochStart = Find_Clean_Indices(N, fs, autoArts, epochLength); % Find start indices of the large clean epochs
             epochStop = epochStart + epochLength*fs - 1;  % Calculate stop indices for each of large clean epoch
@@ -179,9 +170,8 @@ for p = 1:length(phase)
             patientMetrics.electrodes = channelsToAnalyze;
             
             %% Amplitude
-            %% Why are we applying the filter after detecting the artifact? we decided to do it after filtering
-            % % Apply broadband filter to EEG
-            % filteredEEG = Filter_EEG(rerefEEG, fs, 'broadband'); % Apply broadband filter to EEG
+            % Apply broadband filter to EEG
+            filteredEEG = Filter_EEG(rerefEEG, fs, 'broadband'); % Apply broadband filter to EEG
 
             % Initialize vector for amplitude
             amp = nan(nEpoch,nChan);
