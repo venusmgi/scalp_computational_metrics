@@ -1,4 +1,4 @@
-function [filter] = Pick_Filter(filterType,sampleFreq)
+function [filterKernel] = Pick_Filter(filterType,sampleFreq)
 % Function for a switch case for picking a filter
 % Rachel J. Smith (Lopouratory 2019)
 % Eddited by Venus ( 5.6.2025)
