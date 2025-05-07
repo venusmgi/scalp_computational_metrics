@@ -6,69 +6,69 @@ Nyq = sampleFreq./2;
 
 switch filterType
     case 'beta'
-lowestFreq = 14; %Hz
+lowestFreq = 13; %Hz
 secPerCycle = 1/lowestFreq;
-n = ceil(2*(secPerCycle*sampleFreq)); %2 cycles at the lowest frequency analyzed
-f = [0 11 14 30 35 Nyq]./Nyq;
+%filter order should be at least 2 times(secPerCycle*sampleFreq)
+n = round(13*(secPerCycle*sampleFreq)); 
+filterBounds =  [13; 30];
+% transision width should be 10-25% of the upper and lower frequency bounds
+transWidth = [0.10; 0.2]; %having different transition width for different frequencyies; not related to the filterBounds order
+f = [0 (1-transWidth(2))*filterBounds(1) filterBounds(1) filterBounds(2) (1+transWidth(1))*filterBounds(2) Nyq]./Nyq;
 a = [0 0 1 1 0 0];
-filter = firls(n,f,a);
+filterKernel = firls(n,f,a);
 
 
 % Alpha filter
     case 'alpha'
 lowestFreq = 8; %Hz
 secPerCycle = 1/lowestFreq;
-n = ceil(2*(secPerCycle*sampleFreq)); %2 cycles at the lowest frequency analyzed
-f = [0 4 8 12 14 Nyq]./Nyq;
+%2 cycles at the lowest frequency analyzed
+n = round(16*(secPerCycle*sampleFreq)); 
+filterBounds =  [8; 13];
+% transision width should be 10-25% of the upper and lower frequency bounds
+transWidth = 0.1; 
+f = [0 (1-transWidth)*filterBounds(1) filterBounds(1) filterBounds(2) (1+transWidth)*filterBounds(2) Nyq]./Nyq;
 a = [0 0 1 1 0 0];
-filter = firls(n,f,a);
+filterKernel = firls(n,f,a);
+
 
 
 % Theta filter
     case 'theta'
-lowestFreq = 3; %Hz
+lowestFreq = 4; %Hz
 secPerCycle = 1/lowestFreq;
-n = ceil(2*(secPerCycle*sampleFreq)); %2 cycles at the lowest frequency analyzed
-f = [0 3 4 7 9 Nyq]./Nyq;
+%2 cycles at the lowest frequency analyzed
+n = round(8*(secPerCycle*sampleFreq)); %cannot go higher than 8 because it will introduce a spike in filter response
+filterBounds = [4;8];
+transWidth = [0.15; 0.25]; %having different transition width for different frequencyies; not related to the filterBounds order
+f = [0 (1-transWidth(2))*filterBounds(1) filterBounds(1) filterBounds(2) (1+transWidth(1))*filterBounds(2) Nyq]./Nyq;
 a = [0 0 1 1 0 0];
-filter = firls(n,f,a);
+filterKernel = firls(n,f,a);
 
 
 % Broadband filter
     case 'broadband'
 lowestFreq = 2;
 secPerCycle = 1/lowestFreq;
-n = ceil(2*(secPerCycle*sampleFreq));
+n = round(3.5*(secPerCycle*sampleFreq));
 f = [0 0.25 1 55 58 Nyq]./Nyq;
 a = [0 0 1 1 0 0];
-filter = firls(n,f,a);
+filterKernel = firls(n,f,a);
 
 
-% No-Muscle Filter (filter for frequencies associated with muscle
-% artifact)
-    case 'muscle'
-lowestFreq = 15;
-secPerCycle = 1/lowestFreq;
-n = ceil(2*(secPerCycle*sampleFreq));
-f = [0 15 20 50 55 Nyq]./Nyq;
-a = [0 0 1 1 0 0];
-filter = firls(n,f,a);
 
     case 'delta'
 lowestFreq = 1;
 secPerCycle = 1/lowestFreq;
-n = ceil(2*(secPerCycle*sampleFreq));
-f = [0 0.2 1 4 6 Nyq]./Nyq;
+%2 cycles at the lowest frequency analyzed
+%n must be at least 2 to 5 times ( 1/lowestFreq ) * fs ;
+n = round(2*(secPerCycle*sampleFreq));
+filterBounds = [1;4];
+transWidth = 0.1; %having different transition width, to see which one will work better
+f = [0 (1-transWidth)*filterBounds(1) filterBounds(1) filterBounds(2) (1+transWidth)*filterBounds(2) Nyq]./Nyq;
 a = [0 0 1 1 0 0];
-filter = firls(n,f,a);
+filterKernel = fir2(n,f,a);
 
-% % If you want to check the filter:
-% [h,w] = freqz(filter,1,500,2);
-% 
-% figure;
-% plot(f,a,'r.-');
-% hold on;
-% plot(w,abs(h));
 
     otherwise 
         error('You did not choose one of the correct frequency band filters, you silly girl!')
