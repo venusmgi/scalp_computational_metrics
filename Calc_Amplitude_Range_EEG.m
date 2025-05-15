@@ -1,4 +1,4 @@
-function ampMatrix = Calc_Range(data, fs, epochLength, startingIndices)
+function ampMatrix = Calc_Amplitude_Range_EEG(data, fs, epochLength, startingIndices)
 % Outputs a matrix of all amplitude values for each epoch and for all
 % channels in the input data, calculated using the range (peak-to-peak).
 % If artifactual epochs need to be removed, they can be identified using
