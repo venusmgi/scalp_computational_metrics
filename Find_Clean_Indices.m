@@ -1,4 +1,4 @@
-function indices = Find_Clean_Indices(EEGDuration,fs,autoArts,cleanEpochDuration)
+function indices = Find_Clean_Indices(EEGDuration,fs,binArts,cleanEpochDuration)
 
 % FIND_CLEAN_INDICES Identifies clean epochs in an EEG recording
 %
@@ -8,20 +8,15 @@ function indices = Find_Clean_Indices(EEGDuration,fs,autoArts,cleanEpochDuration
 % Inputs:
 %   EEGDuration - Duration of the EEG data in data points
 %   fs - Sampling frequency in Hz
-%   autoArts - artifact times; this is the output of the
-%              get_automatedArtifacts_EEG function
+%   binArts - binary array indicating if an index is clean (0) or
+%             artifactual (1)
+%
 %   cleanEpochDuration - Duration of desired clean epochs in seconds
 %
 % Output:
 %   indices - Start indices of clean epochs
 
-% Create a binary vector representing artifacts (1 = artifact, 0 = clean)
-binArts = zeros(EEGDuration, 1);
-for i = 1:size(autoArts.times,1)
-    artStart = round(autoArts.times(i, 1)*fs)+1;
-    artEnd = min(EEGDuration, round(autoArts.times(i, 2) * fs));
-    binArts(artStart:artEnd) = 1; % Note: artifacts are not necessarily in sequential order; shouldn't matter here
-end
+
 
 % Initialize variables for clean epoch detection
 cleanEpochSamples = floor(cleanEpochDuration*fs);  % duration of clean epoch in samples
