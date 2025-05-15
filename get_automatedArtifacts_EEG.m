@@ -1,4 +1,4 @@
-function [autoArts,artsVec] = get_automatedArtifacts_EEG(eeg_record,fs,stdAbove,buffer,minNumArtChannels)
+function [autoArts,artsVec] = get_automatedArtifacts_EEG(eeg_record,fs,stdAbove,buffer,minNumArtChannels,numChans)
 % Automated artifact detector based on automatic extreme value detection algorithm
 % Outputs a structure with times containing artifacts
 % Based on the methods of Durka et al. 2003; Moretti et al. 2003
@@ -10,8 +10,10 @@ function [autoArts,artsVec] = get_automatedArtifacts_EEG(eeg_record,fs,stdAbove,
 % - stdAbove:           Number of standard deviations above the EEG to be considered an artifact (default: 7.5)
 % - buffer:             Time in seconds before and after detected an artifact to
 %                       remove (default 0.9s)
-% - channelsInvolved:   Minimum number of channels with excessive artifact to be
-%                       counted as artifact (default =1)
+% - channelsInvolved:   Minimum number of channels with excessive artifact
+%                       to count and index as artifactual (default =1)
+% - numChans:           Number of channels to include in artifact
+%                        detection
 % 
 % OUTPUTS:
 % - autoArts:           Structure containing the times and type of
@@ -25,10 +27,11 @@ function [autoArts,artsVec] = get_automatedArtifacts_EEG(eeg_record,fs,stdAbove,
 %
 % V.1.0: Removed 19 channel restriction, treats all rows as EEG
 % V.1.1: Uploaded onto Lopouratory Github, 2022)
+% Updated by Venus Mostaghimi (Lopouratory, 2025)
 
-% Removed 19 channel restriction
-% Take only the first 19 channels 
-eeg_record = eeg_record(1:19,:);
+
+% Take only the first numChans channels 
+eeg_record = eeg_record(1:numChans,:);
 
 % filter data the same way they do to clinically view
 % Create filters - these were compared to Nihon Kohden viewer in Aug 2015
