@@ -18,18 +18,8 @@ function indices = Find_Clean_Indices(EEGDuration,fs,autoArts,cleanEpochDuration
 % Create a binary vector representing artifacts (1 = artifact, 0 = clean)
 binArts = zeros(EEGDuration, 1);
 for i = 1:size(autoArts.times,1)
-    %% previoulsy it used to be 
-    artStart = max(1, round(autoArts.times(i, 1) * fs));
-    %% is there a reason for changing this
-    % artStart = round(autoArts.times(i, 1)*fs)+1;
-   
-    %% Also this previously used to be: 
-     artEnd = min(EEGDuration, round(autoArts.times(i, 2) * fs));
-     %% is there a reason for changing this
-     % artEnd = min(EEGDuration, round(autoArts.times(i, 2)*fs+1));
-     %% if we want to add the +1 isn't it better to do 
-    % artEnd = min(EEGDuration, floor(autoArts.times(i, 2)*fs+1));
-
+    artStart = round(autoArts.times(i, 1)*fs)+1;
+    artEnd = min(EEGDuration, round(autoArts.times(i, 2) * fs));
     binArts(artStart:artEnd) = 1; % Note: artifacts are not necessarily in sequential order; shouldn't matter here
 end
 
