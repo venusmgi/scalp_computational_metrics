@@ -31,7 +31,8 @@
 %
 % Functions Called by the Script:
 % - Rereference_EEG: Re-references the EEG data using specified methods.
-% - Filter_EEG: Applies filtering to the EEG data.
+% - Filter_EEG: Applies filtering to the EEG data. This function itself
+%               calls Pick_Filter.m
 % - Find_Clean_Indices: Identifies clean epochs in the EEG data.
 % - Calc_Amplitude_Range_EEG: Calculates the amplitude range of the EEG data.
 % - Calc_SEF_SpectralPower_EEG: Calculates spectral power and spectral edge frequency.
@@ -47,7 +48,7 @@ clear variables; close all; clc;  % Clear workspace, close all figures, and clea
 dataDir = 'D:\Data\UCB Data';  % Directory containing EEG data
 dataDir = 'D:\Venus\Lab projects\PERF\UCB short clips'; 
 phase = {'Pre', 'Post'};  % Phases of the treatment
-state = {'Sleep1', 'Sleep2', 'Wake1', 'Wake2'};  % Different states or conditions
+state = {'Wake1','Sleep1', 'Sleep2', 'Wake2'};  % Different states or conditions
 headerName = 'reordered_hdr';  % Variable name for EEG header in .mat files
 eegRecordName = 'reordered_record';  % Variable name for EEG data in .mat files
 frequencyName = 'frequency';  % Field name for sampling frequency in header
@@ -75,7 +76,9 @@ subEpochLengthPSD = 5; % sub-epoch duration for PSD, in seconds
 % Parameters for artifact detection
 stdAbove = 7.5;        % Standard deviation threshold for artifact detection
 buffer = 0.9;          % Buffer around detected artifacts (in seconds)
-nArtChans = 1;         % Number of channels that must exceed threshold for artifact detection
+nArtChans = 1;         % Minimum number of channels with excessive artifact to count and index as artifactual (default =1)
+numChans= 19;              % Number of channels to include in artifact detection
+                      
 
 % Parameters for amplitude, SEF and power spectral density calculation
 rereferenceMethod = 'EAR';  % choose 'EAR' for linked ears,'CAR' for common average
@@ -128,9 +131,9 @@ for p = 1:length(phase)
             loadedData = load(fileNames{f}); % doesn't need to specify the path any more Load(currentDir ‘\’ fileNames{f})
             recordEEG = loadedData.(eegRecordName);
             hdrEEG = loadedData.(headerName);
-
             %check if the EEG is standerdizded, and if not, the function
             %will throw an error
+            rerefEEG = Rereference_EEG(recordEEG, hdrEEG, {'CAR'}); 
             Check_EEG_Standardization (desiredChannelOrder, hdrEEG)
 
             % Find the index of each channel that will be analyzed
@@ -159,9 +162,9 @@ for p = 1:length(phase)
 
             % Detect artifacts using the automated artifact detection function
             % NOTE: Input unfiltered EEG; function contains filtering
-            autoArts = get_automatedArtifacts_EEG(rerefEEG, fs, stdAbove, buffer, nArtChans);
+            [artifactalIndecies,~] = get_automatedArtifacts_EEG(rerefEEG, fs, stdAbove, buffer, nArtChans, numChans);
 
-            epochStart = Find_Clean_Indices(N, fs, autoArts, epochLength); % Find start indices of the large clean epochs
+            epochStart = Find_Clean_Indices(N, fs, artifactalIndecies, epochLength); % Find start indices of the large clean epochs
             epochStop = epochStart + epochLength*fs - 1;  % Calculate stop indices for each of large clean epoch
             nEpoch = length(epochStart); % Number of large clean epochs
             
@@ -182,7 +185,7 @@ for p = 1:length(phase)
                 epochEEG = filteredEEG(chanVec,epochStart(epochId):epochStop(epochId));
                 % Calculate amplitude; matrix will be nEpoch x nChan
                 % Here we save the median across all sub-epochs
-                amp(epochId,:) = median(Calc_Range_EEG(epochEEG, fs, subEpochLengthAmp),1);
+                amp(epochId,:) = median(Calc_Amplitude_Range_EEG(epochEEG, fs, subEpochLengthAmp),1);
             end
 
             patientMetrics.amplitude = amp;
