@@ -1,4 +1,4 @@
-function [artsVec, autoArts] = get_automatedArtifacts_EEG(eeg_record,fs,stdAbove,buffer,minNumArtChannels,numChans,varargin)
+function [totalArts, autoArts] = get_automatedArtifacts_EEG(eeg_record,fs,stdAbove,buffer,minNumArtChannels,numChans,varargin)
 % Automated artifact detector based on automatic extreme value detection algorithm
 % Outputs a structure with times containing artifacts
 % Based on the methods of Durka et al. 2003; Moretti et al. 2003
@@ -70,39 +70,48 @@ end
 sumArtsVec = sum(possArts,1);
 artsVec = sumArtsVec>minNumArtChannels-1;
 
+
+
+% pad around the artifact to ensure you get the entire event (buffer = # of seconds)
+indicesArts = find(artsVec);
+for k=1:size(indicesArts,2)
+    if indicesArts(k)-buffer*fs<=0
+        artsVec(1:indicesArts(k)+buffer*fs) = true;
+    elseif indicesArts(k)+buffer*fs>=size(eeg_record,2)
+        artsVec(indicesArts(k)-buffer*fs:end) = true;
+    else
+        artsVec(indicesArts(k)-buffer*fs:indicesArts(k)+buffer*fs) = true;
+    end
+end
+
 % get logical vector for impedance check artifacts
 diff_EEGrec = diff(eeg_record,1,2);
 impChecks = diff_EEGrec == 0;
 sumImpCheck = sum(impChecks);
 impCheckVec = sumImpCheck>8;
 
-impCheckVec = [false;impCheckVec]; % pad to match the size, nor artifact at the begining
-totalArts = or(artsVec,impCheckVec); % combine general artifacts and impedance artifacts
+%combine general artifacts with impedance check artifacts
+impCheckVec = [false impCheckVec]; % pad to match the size, nor artifact at the begining
+totalArts = artsVec|impCheckVec;
+    
+
+
+
 
 %if the user needs the artifactual indices to be turned into start and end
 %time
 if p.Results.artTime
 
-    % pad around the artifact to ensure you get the entire event (buffer = # of seconds)
-    indicesArts = find(totalArts);
-    if ~isempty(indicesArts)
-        for k = 1:length(indicesArts)
-            startIdx = max(1, indicesArts(k)-buffer*fs);
-            endIdx = min(length(indicesArts),indicesArts(k)+buffer*fs);
-            artsVec(startIdx:endIdx) = true;
-    
-        end
-    end
-    
     % get it into times that can be read into the artifact_marking code
     % difference between indices vector will show which have a difference more
     % than 1
-    fullIndArts = find(artsVec);
+    fullIndArts = find(totalArts);
     if ~isempty(fullIndArts)
         % Pre-allocate artTimes
         diffVec = diff(fullIndArts);
         largeDiff = find(diffVec~=1);  %find when the artifact sample is non-consecutive
         numArtifacts = length(largeDiff) + 1;
+        
         artTimes = zeros(numArtifacts,2);
         artTimes(1,1) = fullIndArts(1)./fs; %begining of the first artifact
         for m = 1:size(largeDiff,2)
@@ -113,6 +122,22 @@ if p.Results.artTime
     else
         artTimes = zeros(0,2);
     end
+
+    % fullIndArts2 = find(totalArts);
+    % diffVec2 = diff(fullIndArts2);
+    % largeDiff2 = find(diffVec2~=1); %find when the artifact sample is non-consecutive
+    % 
+    % artTimes2 = [];
+    % if ~isempty(fullIndArts2)
+    %     artTimes2 = zeros(1,2);
+    %     artTimes2(1,1) = fullIndArts2(1)./fs; 
+    %     for m = 1:size(largeDiff2,2)
+    %         artTimes2(m,2) = fullIndArts2(largeDiff2(m))./fs;
+    %         artTimes2(m+1,1) = fullIndArts2(largeDiff2(m)+1)./fs;
+    %     end
+    %     artTimes2(size(largeDiff2,2)+1,2) = fullIndArts2(end)./fs;
+    % end
+
     
     % Create output structure
     autoArts.times = artTimes;
@@ -123,7 +148,7 @@ if p.Results.artTime
     
     %marking any artifact that came from impedence check
     if ~isempty(artTimes)
-        for i = 1:length(artTimes)
+        for i = 1:size(artTimes,1)
             startSmaple = round(artTimes(i,1)*fs);
             endSample = round(artTimes(i,2)*fs);
             if any(impCheckVec(startSmaple:endSample))
