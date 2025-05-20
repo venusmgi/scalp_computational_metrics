@@ -36,8 +36,8 @@
 % - Find_Clean_Indices: Identifies clean epochs in the EEG data.
 % - Calc_Amplitude_Range_EEG: Calculates the amplitude range of the EEG data.
 % - Calc_SEF_SpectralPower_EEG: Calculates spectral power and spectral edge frequency.
-% - Calc_ShannonEntropy_EEG: Calculates Shannon entropy of the EEG data.
-% - Calc_PermutationEntropy_EEG: Calculates permutation entropy of the EEG data.
+% - Calc_ShannonEntropy: Calculates Shannon entropy of the EEG data.
+% - Calc_PermutationEntropy: Calculates permutation entropy of the EEG data.
 %
 % Author: Venus
 % Date: 2.25.2025
@@ -200,7 +200,7 @@ for p = 1:length(phase)
                 % Calculate SEF and power for each sub-epoch
                 epochEEG = filteredEEG(chanVec,epochStart(epochId):epochStop(epochId));
                 [tempSEF,tempDeltaDB,tempThetaDB,tempAlphaDB,tempBetaDB,tempBroadDB]...
-                    = Calc_SEF_SpectralPower_EEG(epochEEG,fs,subEpochLengthPSD);
+                    = Calc_SEF_SpectralPower(epochEEG,fs,subEpochLengthPSD);
 
                 % Take the median value across sub-epochs
                 SEF(epochId,:) = median(tempSEF,1);
@@ -224,8 +224,8 @@ for p = 1:length(phase)
 
             % Calculate Shannon entropy and permutation entropy for each epoch
             entEEG = filteredEEG(chanVec,:);
-            shanEntDelta = Calc_ShannonEntropy_EEG(entEEG,fs,nBinsDelta,epochLength,epochStart);
-            permEntDelta = Calc_PermutationEntropy_EEG(entEEG,fs,order,delay,epochLength,epochStart);
+            shanEntDelta = Calc_ShannonEntropy(entEEG,fs,nBinsDelta,epochLength,epochStart);
+            permEntDelta = Calc_PermutationEntropy(entEEG,fs,order,delay,epochLength,epochStart);
 
             patientMetrics.shanEntDelta = shanEntDelta;
             patientMetrics.permEntDelta = permEntDelta;
@@ -236,8 +236,8 @@ for p = 1:length(phase)
 
             % Calculate Shannon entropy and permutation entropy for each epoch
             entEEG = filteredEEG(chanVec,:);
-            shanEntTheta = Calc_ShannonEntropy_EEG(entEEG,fs,nBinsTheta,epochLength,epochStart);
-            permEntTheta = Calc_PermutationEntropy_EEG(entEEG,fs,order,delay,epochLength,epochStart);
+            shanEntTheta = Calc_ShannonEntropy(entEEG,fs,nBinsTheta,epochLength,epochStart);
+            permEntTheta = Calc_PermutationEntropy(entEEG,fs,order,delay,epochLength,epochStart);
 
             patientMetrics.shanEntTheta = shanEntTheta;
             patientMetrics.permEntTheta = permEntTheta;
@@ -248,8 +248,8 @@ for p = 1:length(phase)
 
             % Calculate Shannon entropy and permutation entropy for each epoch
             entEEG = filteredEEG(chanVec,:);
-            shanEntAlpha = Calc_ShannonEntropy_EEG(entEEG,fs,nBinsAlpha,epochLength,epochStart);
-            permEntAlpha = Calc_PermutationEntropy_EEG(entEEG,fs,order,delay,epochLength,epochStart);
+            shanEntAlpha = Calc_ShannonEntropy(entEEG,fs,nBinsAlpha,epochLength,epochStart);
+            permEntAlpha = Calc_PermutationEntropy(entEEG,fs,order,delay,epochLength,epochStart);
 
             patientMetrics.shanEntAlpha = shanEntAlpha;
             patientMetrics.permEntAlpha = permEntAlpha;
@@ -260,8 +260,8 @@ for p = 1:length(phase)
 
             % Calculate Shannon entropy and permutation entropy for each epoch
             entEEG = filteredEEG(chanVec,:);
-            shanEntBeta = Calc_ShannonEntropy_EEG(entEEG,fs,nBinsBeta,epochLength,epochStart);
-            permEntBeta = Calc_PermutationEntropy_EEG(entEEG,fs,order,delay,epochLength,epochStart);
+            shanEntBeta = Calc_ShannonEntropy(entEEG,fs,nBinsBeta,epochLength,epochStart);
+            permEntBeta = Calc_PermutationEntropy(entEEG,fs,order,delay,epochLength,epochStart);
             
             patientMetrics.shanEntBeta = shanEntBeta;
             patientMetrics.permEntBeta = permEntBeta;
