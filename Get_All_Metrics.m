@@ -58,8 +58,8 @@ desiredChannelOrder =  {'Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1',...
     'O2','F7','F8','T3','T4','T5','T6','Fz','Cz','Pz','A1','A2'};
 
 % EEG channels to include in the analysis; write the list in a cell {}
-channelsToAnalyze = {'Cz', 'Fz'};
-% channelsToAnalyze = {'Cz'};
+
+channelsToAnalyze = {'Cz','Fz'};
 
 % Epoch length parameter: this script will calculate one value of each
 % metric for each EEG epoch of this duration, in seconds
@@ -151,9 +151,9 @@ for p = 1:length(phase)
             end
             
             % Extract the sampling rate and EEG duration
-            fs = unique(hdrEEG.(frequencyName)(channelLoc)); % I added the unique in case we ad multiple channels selected
+            fs = unique(hdrEEG.(frequencyName)(channelLoc)); % I added the unique in case we had multiple channels selected
             if length(unique(hdrEEG.(frequencyName))) ~= 1
-                error ("The upploaded file has multiple sample rates (fs), Plkease make sure that the file is ampled with a single frequency")
+                error ("The upploaded file has multiple sample rates (fs), Please make sure that the file is sampled with a single frequency")
             end
             N = size(recordEEG,2);
 
@@ -164,9 +164,9 @@ for p = 1:length(phase)
             % NOTE: Input unfiltered EEG; function contains filtering
             [artifactalIndecies,~] = get_automatedArtifacts_EEG(rerefEEG, fs, stdAbove, buffer, nArtChans, numChans);
 
-            epochStart = Find_Clean_Indices(N, fs, artifactalIndecies, epochLength); % Find start indices of the large clean epochs
-            epochStop = epochStart + epochLength*fs - 1;  % Calculate stop indices for each of large clean epoch
-            nEpoch = length(epochStart); % Number of large clean epochs
+            epochStart = Find_Clean_Indices(N, fs, artifactalIndecies, epochLength); % Find start indices of the clean epochs
+            epochStop = epochStart + epochLength*fs - 1;  % Calculate stop indices for each of clean epoch
+            nEpoch = length(epochStart); % Number of clean epochs
             
             % Save start and stop times of each epoch and list of channels
             patientMetrics.epochTimes = [epochStart,epochStop];
@@ -195,7 +195,7 @@ for p = 1:length(phase)
             % Initialize matrices
             [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = deal(nan(nEpoch,nChan));
 
-            % Loop through all large epochs
+            % Loop through all epochs
             for epochId = 1:nEpoch
                 % Calculate SEF and power for each sub-epoch
                 epochEEG = filteredEEG(chanVec,epochStart(epochId):epochStop(epochId));
