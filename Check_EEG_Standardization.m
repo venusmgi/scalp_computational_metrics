@@ -23,8 +23,8 @@ function Check_EEG_Standardization(desiredChannelOrder, headerEEG)
     % Check if the first 19 channels match the desired order
     for i = 1:19
         correctChannOrder(i, 1) = isequal(headerEEG.label(i), desiredChannelOrder(i));
+ 
     end
-
     % Check if the 20th channel is either "A1" or "M1"
     correctChannOrder(20, 1) = isequal(headerEEG.label(20), "A1") || isequal(headerEEG.label(20), "M1");
 
@@ -33,6 +33,6 @@ function Check_EEG_Standardization(desiredChannelOrder, headerEEG)
 
     % Verify that all channels are in the correct order
     if sum(correctChannOrder) ~= lenChanOrder
-        error("The EEG channel order is not standardized. Use the function 'Get_desired_channel_order_output_excel.m' to standardize the EDF and convert it to a MAT file, then upload the EEG.");
+        error("The EEG channel order is not standardized. Use the function 'Standardize_EEG_Channel_Order.m' to standardize the channel order and label of EEG mat file.");
     end
 end
