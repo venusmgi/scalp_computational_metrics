@@ -1,38 +1,48 @@
-% Check_EEG_Standardization
-% Verifies that the EEG channel order matches the desired standard order.
+function Check_EEG_Standardization(desiredChannelOrder, headerEEG)
+% CHECKEEGSTANDARDIZATION Verifies the EEG channel order and reference names.
 %
-% This function checks whether the EEG data in `headerEEG` follows the specified
-% channel order in `desiredChannelOrder`. It ensures that the channels are in the
-% correct sequence and that reference channels (A1/M1 and A2/M2) are correctly labeled.
-% If the channel order is not standardized, an error is raised with a suggestion
-% to use a specific function for standardization.
+% This function checks whether the EEG data contained in `headerEEG` follows the
+% specified channel order defined by `desiredChannelOrder`. It ensures that the EEG
+% channels are in the correct sequence and that reference channels (A1/M1 and A2/M2)
+% are appropriately labeled. If the channel order is not standardized, it raises an
+% error with suggestions on how to address the issue.
 %
 % Inputs:
-%   desiredChannelOrder - A cell array specifying the desired order of EEG channels.
-%   headerEEG - A structure containing EEG header information, including channel labels.
+%   desiredChannelOrder - A cell array specifying the desired standard order of EEG channels.
+%   headerEEG - A structure containing EEG header information, such as channel labels.
 %
 % Outputs:
-%   None. The function raises an error if the channel order is not standardized.
+%   None. An error is raised if the EEG channel order is not standardized.
 
-function Check_EEG_Standardization(desiredChannelOrder, headerEEG)
+    % Determine the number of channels specified by the desired order
+    numChannels = length(desiredChannelOrder);
 
-    % Initialize the array to track correct channel order
-    lenChanOrder = length(desiredChannelOrder);
-    correctChannOrder = nan(lenChanOrder, 1);
+    % Initialize logical array to track if each channel is in the correct order
+    isChannelOrderCorrect = false(numChannels, 1);
 
-    % Check if the first 19 channels match the desired order
-    for i = 1:19
-        correctChannOrder(i, 1) = isequal(headerEEG.label(i), desiredChannelOrder(i));
- 
+    % Check if the reference channel names match the desired naming convention
+    actualRefChannels = ismember({'A1', 'A2', 'M1', 'M2'}, headerEEG.label);
+    expectedRefChannels = ismember({'A1', 'A2', 'M1', 'M2'}, desiredChannelOrder);
+
+    if ~isequal(actualRefChannels, expectedRefChannels)
+        warning(['The reference channel names differ from the desired standard.', ...
+                 ' Check the channel name to ensure accuracy in channel labeling. Ignoring this difference for now.']);
+        % Handle potential mismatches between expected and actual reference names
+        if ismember({'A1', 'A2'}, headerEEG.label) && ismember({'M1', 'M2'}, desiredChannelOrder)
+            desiredChannelOrder(ismember(desiredChannelOrder, {'M1', 'M2'})) = {'A1', 'A2'};
+        elseif ismember({'M1', 'M2'}, headerEEG.label) && ismember({'A1', 'A2'}, desiredChannelOrder)
+            desiredChannelOrder(ismember(desiredChannelOrder, {'A1', 'A2'})) = {'M1', 'M2'};
+        end
     end
-    % Check if the 20th channel is either "A1" or "M1"
-    correctChannOrder(20, 1) = isequal(headerEEG.label(20), "A1") || isequal(headerEEG.label(20), "M1");
 
-    % Check if the 21st channel is either "A2" or "M2"
-    correctChannOrder(21, 1) = isequal(headerEEG.label(21), "A2") || isequal(headerEEG.label(21), "M2");
+    % Compare the current channel order against the desired order
+    for i = 1:numChannels
+        isChannelOrderCorrect(i) = strcmp(headerEEG.label{i}, desiredChannelOrder{i});
+    end
 
-    % Verify that all channels are in the correct order
-    if sum(correctChannOrder) ~= lenChanOrder
-        error("The EEG channel order is not standardized. Use the function 'Standardize_EEG_Channel_Order.m' to standardize the channel order and label of EEG mat file.");
+    % Verify whether all channels are in the desired order
+    if ~all(isChannelOrderCorrect)
+        error(['The EEG channel order is not standardized.', ...
+               ' Please use the "Standardize_EEG_Channel_Order" function to correct the channel order and labels.']);
     end
 end
