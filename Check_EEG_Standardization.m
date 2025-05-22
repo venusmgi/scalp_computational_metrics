@@ -28,9 +28,9 @@ function Check_EEG_Standardization(desiredChannelOrder, headerEEG)
         warning(['The reference channel names differ from the desired standard.', ...
                  ' Check the channel name to ensure accuracy in channel labeling. Ignoring this difference for now.']);
         % Handle potential mismatches between expected and actual reference names
-        if ismember({'A1', 'A2'}, headerEEG.label) && ismember({'M1', 'M2'}, desiredChannelOrder)
+        if all(ismember({'A1', 'A2'}, headerEEG.label)) && all(ismember({'M1', 'M2'}, desiredChannelOrder))
             desiredChannelOrder(ismember(desiredChannelOrder, {'M1', 'M2'})) = {'A1', 'A2'};
-        elseif ismember({'M1', 'M2'}, headerEEG.label) && ismember({'A1', 'A2'}, desiredChannelOrder)
+        elseif all(ismember({'M1', 'M2'}, headerEEG.label)) && all(ismember({'A1', 'A2'}, desiredChannelOrder))
             desiredChannelOrder(ismember(desiredChannelOrder, {'A1', 'A2'})) = {'M1', 'M2'};
         end
     end
