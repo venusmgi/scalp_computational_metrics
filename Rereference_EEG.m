@@ -55,7 +55,7 @@ elseif strcmp(rereferenceMethod, 'bipolar')
     Fp1 = Get_Channel_Loc ('Fp1',EEG_hdr);
     Fp2 = Get_Channel_Loc ('Fp2',EEG_hdr);
     F3 = Get_Channel_Loc ('F3',EEG_hdr);
-    F4 =Get_Channel_Loc ('F4',EEG_hdr);
+    F4 = Get_Channel_Loc ('F4',EEG_hdr);
     C3 = Get_Channel_Loc ('C3',EEG_hdr);
     C4 = Get_Channel_Loc ('C4',EEG_hdr);
     P3 = Get_Channel_Loc ('P3',EEG_hdr);
@@ -63,7 +63,7 @@ elseif strcmp(rereferenceMethod, 'bipolar')
     O1 = Get_Channel_Loc ('O1',EEG_hdr);
     O2 = Get_Channel_Loc ('O2',EEG_hdr);
     F7 = Get_Channel_Loc ('F7',EEG_hdr);
-    F8 =Get_Channel_Loc ('F8',EEG_hdr);
+    F8 = Get_Channel_Loc ('F8',EEG_hdr);
     T3 = Get_Channel_Loc ('T3',EEG_hdr);
     T4 = Get_Channel_Loc ('T4',EEG_hdr);
     T5 = Get_Channel_Loc ('T5',EEG_hdr);
@@ -96,7 +96,7 @@ elseif strcmp(rereferenceMethod, 'bipolar')
 
 elseif contains(rereferenceMethod, channelList) 
     % Single-Channel Re-referencing:
-    % Check if onl a single channel is chosen
+    % Check if only a single channel is chosen fo re-referencing
     if sum(contains(rereferenceMethod, channelList)) >1
         error ('Choose only one channel for re-referencing.')
     end
@@ -116,5 +116,5 @@ end
 
 % GET_CHANNEL_LOC Finds the index of a specified channel label in the EEG header
 function channLoc = Get_Channel_Loc (channel_label,EEG_hdr)
-    channLoc = strcmp(EEG_hdr.label, channel_label);
+    channLoc = strcmpi(EEG_hdr.label, channel_label);
 end
