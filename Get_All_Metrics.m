@@ -133,7 +133,6 @@ for p = 1:length(phase)
             hdrEEG = loadedData.(headerName);
             %check if the EEG is standerdizded, and if not, the function
             %will throw an error
-            rerefEEG = Rereference_EEG(recordEEG, hdrEEG, {'CAR'}); 
             Check_EEG_Standardization (desiredChannelOrder, hdrEEG)
 
             % Find the index of each channel that will be analyzed
