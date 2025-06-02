@@ -45,11 +45,10 @@
 clear variables; close all; clc;  % Clear workspace, close all figures, and clear command window
 
 %% Define directories and parameters for processing
-dataDir = 'D:\Data\UCB Data';  % Directory containing EEG data
-dataDir = 'D:\Venus\Lab projects\PERF\UCB short clips'; 
+dataDir = 'D:\Venus\Lab projects\PERF\UCB short clips';
 phase = {'Pre', 'Post'};  % Phases of the treatment
-state = {'Wake1','Sleep1', 'Sleep2', 'Wake2'};  % Different states or conditions
-headerName = 'reordered_hdr';  % Variable name for EEG header in .mat files
+state = {'Wake1', 'Sleep1', 'Sleep2', 'Wake2'};  % Different states or conditions
+headerName = 'reordered_hdr';  % Variable name for EEG header in .mat files 
 eegRecordName = 'reordered_record';  % Variable name for EEG data in .mat files
 frequencyName = 'frequency';  % Field name for sampling frequency in header
 
@@ -58,8 +57,7 @@ desiredChannelOrder =  {'Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1',...
     'O2','F7','F8','T3','T4','T5','T6','Fz','Cz','Pz','A1','A2'};
 
 % EEG channels to include in the analysis; write the list in a cell {}
-
-channelsToAnalyze = {'Cz','Fz'};
+channelsToAnalyze = {'Cz'};
 
 % Epoch length parameter: this script will calculate one value of each
 % metric for each EEG epoch of this duration, in seconds
@@ -74,16 +72,15 @@ subEpochLengthAmp = 1; % sub-epoch duration for amplitude, in seconds
 subEpochLengthPSD = 5; % sub-epoch duration for PSD, in seconds
 
 % Parameters for artifact detection
-stdAbove = 7.5;        % Standard deviation threshold for artifact detection
-buffer = 0.9;          % Buffer around detected artifacts (in seconds)
-nArtChans = 1;         % Minimum number of channels with excessive artifact to count and index as artifactual (default =1)
-numChans= 19;              % Number of channels to include in artifact detection
+stdAbove = 7.5;   % Standard deviation threshold for artifact detection
+buffer = 0.9;     % Buffer before/after detected artifacts (in seconds)
+nArtChans = 1;    % Minimum number of channels with excessive artifact to count and index as artifactual (default=1)
+numChans= 19;     % Number of channels to include in artifact detection
                       
-
 % Parameters for amplitude, SEF and power spectral density calculation
-rereferenceMethod = 'EAR';  % choose 'EAR' for linked ears,'CAR' for common average
-% 'bipolar' for  longitudinal bipolar, or any channel name in the "desiredChannelOrder" for single
-% channel referencing
+rereferenceMethod = 'EAR';  % choose 'EAR' for linked ears, 'CAR' for common average
+        % 'bipolar' for  longitudinal bipolar, or any channel name in the
+        % "desiredChannelOrder" for single channel referencing
 
 % Parameters for permutation entropy calculations
 boxSize = 1;
@@ -106,13 +103,7 @@ for p = 1:length(phase)
     % Loop over each state, e.g., wakefulness or sleep
     for s = 1:length(state)
 
-        % Get file names of EEG datasets in current directory
-        currentDir = [dataDir '\' phase{p} '\' state{s} '\Cases']; % Path to current data directory
-       
-        %% Venus changed:
-        % we don't have pre treatment controls, or post treatment controls,
-        % so I don't think adding Cases makes sense
-
+        % Define directory string and get all .mat filenames
         currentDir = [dataDir '\' phase{p} '\' state{s}];
         fileCell = struct2cell(dir(fullfile(currentDir, '*.mat')));  % List all .mat files in the directory
         fileNames = fileCell(1,:)'; % the first field in the "dir" structure is the file name
@@ -131,8 +122,7 @@ for p = 1:length(phase)
             loadedData = load(fileNames{f}); % doesn't need to specify the path any more Load(currentDir ‘\’ fileNames{f})
             recordEEG = loadedData.(eegRecordName);
             hdrEEG = loadedData.(headerName);
-            %check if the EEG is standerdizded, and if not, the function
-            %will throw an error
+            % Check if the channel order and names are standardized; if not, throw error
             Check_EEG_Standardization (desiredChannelOrder, hdrEEG)
 
             % Find the index of each channel that will be analyzed
@@ -142,7 +132,7 @@ for p = 1:length(phase)
                 % This vector will contain a value of "1" at the index of the channel
                 channelLoc = strcmp(hdrEEG.label,channelsToAnalyze{i});
                 % If the channel is found, save the index; if not, throw error
-                if sum(channelLoc)==0
+                if all(~channelLoc)
                     error('Channel %s not found in EEG header.\n',channelsToAnalyze{i})
                 else
                     chanVec(i) = find(channelLoc==1);
@@ -150,20 +140,30 @@ for p = 1:length(phase)
             end
             
             % Extract the sampling rate and EEG duration
-            fs = unique(hdrEEG.(frequencyName)(channelLoc)); % I added the unique in case we had multiple channels selected
-            if length(unique(hdrEEG.(frequencyName))) ~= 1
-                error ("The upploaded file has multiple sample rates (fs), Please make sure that the file is sampled with a single frequency")
+            fs = unique(hdrEEG.(frequencyName)(channelLoc)); % this returns all unique values of sampling frequency for the channels being analyzed
+            if length(unique(hdrEEG.(frequencyName))) ~= 1 % if there is more than one sampling frequency
+                error("The uploaded file has multiple sample rates (fs). Please make sure that the file is sampled with a single frequency.")
             end
-            N = size(recordEEG,2);
+            
+            % Check orientation of EEG matrix; transpose if needed
+            if size(recordEEG,1) > size(recordEEG,2) % if more rows than columns
+                warning('EEG matrix has %g rows and %g columns. It will be assumed that rows=time and columns=channels.', size(recordEEG,1), size(recordEEG,2))
+                recordEEG = recordEEG';
+            end
+            N = size(recordEEG,2);  % number of time points
 
             % Re-reference EEG
             rerefEEG = Rereference_EEG(recordEEG, hdrEEG, rereferenceMethod); 
 
+            %Extract EEG signal for the selected Channel
+            signalEEG = rerefEEG(chanVec,:);
+
             % Detect artifacts using the automated artifact detection function
             % NOTE: Input unfiltered EEG; function contains filtering
-            [artifactalIndecies,~] = get_automatedArtifacts_EEG(rerefEEG, fs, stdAbove, buffer, nArtChans, numChans);
+            [artifactInd,~] = get_automatedArtifacts_EEG(signalEEG, fs, stdAbove, buffer, nArtChans, nChan);
+            
 
-            epochStart = Find_Clean_Indices(N, fs, artifactalIndecies, epochLength); % Find start indices of the clean epochs
+            epochStart = Find_Clean_Indices(N, fs, artifactInd, epochLength); % Find start indices of the clean epochs
             epochStop = epochStart + epochLength*fs - 1;  % Calculate stop indices for each of clean epoch
             nEpoch = length(epochStart); % Number of clean epochs
             
@@ -173,7 +173,7 @@ for p = 1:length(phase)
             
             %% Amplitude
             % Apply broadband filter to EEG
-            filteredEEG = Filter_EEG(rerefEEG, fs, 'broadband'); % Apply broadband filter to EEG
+            filteredEEG = Filter_EEG(signalEEG, fs, 'broadband'); % Apply broadband filter to EEG
 
             % Initialize vector for amplitude
             amp = nan(nEpoch,nChan);
@@ -181,7 +181,7 @@ for p = 1:length(phase)
             % Loop through each clean epoch
             for epochId = 1:nEpoch
                 % Select the large epoch of EEG to analyze
-                epochEEG = filteredEEG(chanVec,epochStart(epochId):epochStop(epochId));
+                epochEEG = filteredEEG(:,epochStart(epochId):epochStop(epochId));
                 % Calculate amplitude; matrix will be nEpoch x nChan
                 % Here we save the median across all sub-epochs
                 amp(epochId,:) = median(Calc_Amplitude_Range_EEG(epochEEG, fs, subEpochLengthAmp),1);
@@ -197,7 +197,7 @@ for p = 1:length(phase)
             % Loop through all epochs
             for epochId = 1:nEpoch
                 % Calculate SEF and power for each sub-epoch
-                epochEEG = filteredEEG(chanVec,epochStart(epochId):epochStop(epochId));
+                epochEEG = filteredEEG(:,epochStart(epochId):epochStop(epochId));
                 [tempSEF,tempDeltaDB,tempThetaDB,tempAlphaDB,tempBetaDB,tempBroadDB]...
                     = Calc_SEF_SpectralPower(epochEEG,fs,subEpochLengthPSD);
 
@@ -219,10 +219,9 @@ for p = 1:length(phase)
 
             %% Delta entropy
             % Delta frequency band
-            filteredEEG = Filter_EEG(rerefEEG, fs, 'delta');
+            entEEG = Filter_EEG(signalEEG, fs, 'delta');
 
             % Calculate Shannon entropy and permutation entropy for each epoch
-            entEEG = filteredEEG(chanVec,:);
             shanEntDelta = Calc_ShannonEntropy(entEEG,fs,nBinsDelta,epochLength,epochStart);
             permEntDelta = Calc_PermutationEntropy(entEEG,fs,order,delay,epochLength,epochStart);
 
@@ -231,10 +230,9 @@ for p = 1:length(phase)
 
             %% Theta entropy
             % Theta frequency band
-            filteredEEG = Filter_EEG(rerefEEG, fs, 'theta');
+            entEEG = Filter_EEG(signalEEG, fs, 'theta');
 
             % Calculate Shannon entropy and permutation entropy for each epoch
-            entEEG = filteredEEG(chanVec,:);
             shanEntTheta = Calc_ShannonEntropy(entEEG,fs,nBinsTheta,epochLength,epochStart);
             permEntTheta = Calc_PermutationEntropy(entEEG,fs,order,delay,epochLength,epochStart);
 
@@ -243,10 +241,9 @@ for p = 1:length(phase)
 
             %% Alpha entropy
             % Alpha frequency band
-            filteredEEG = Filter_EEG(rerefEEG, fs, 'alpha');
+            entEEG = Filter_EEG(signalEEG, fs, 'alpha');
 
             % Calculate Shannon entropy and permutation entropy for each epoch
-            entEEG = filteredEEG(chanVec,:);
             shanEntAlpha = Calc_ShannonEntropy(entEEG,fs,nBinsAlpha,epochLength,epochStart);
             permEntAlpha = Calc_PermutationEntropy(entEEG,fs,order,delay,epochLength,epochStart);
 
@@ -255,10 +252,9 @@ for p = 1:length(phase)
 
             %% Beta entropy
             % Beta frequency band
-            filteredEEG = Filter_EEG(rerefEEG, fs, 'beta');
+            entEEG = Filter_EEG(signalEEG, fs, 'beta');
 
             % Calculate Shannon entropy and permutation entropy for each epoch
-            entEEG = filteredEEG(chanVec,:);
             shanEntBeta = Calc_ShannonEntropy(entEEG,fs,nBinsBeta,epochLength,epochStart);
             permEntBeta = Calc_PermutationEntropy(entEEG,fs,order,delay,epochLength,epochStart);
             
@@ -271,9 +267,11 @@ for p = 1:length(phase)
         end
 
         % Construct the filename using sprintf
-        eegMetricFilename = sprintf('%s_%s_results.mat', state{s}, phase{p});
+        eegMetricFilename = sprintf('%s_%s_results2.mat', state{s}, phase{p});
 
         % Save the variables to the respective files
         save(eegMetricFilename, "eegComputationalMetrics", "fileNames", '-v7.3');
     end
 end
+
+
