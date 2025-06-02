@@ -155,21 +155,22 @@ for p = 1:length(phase)
             % Re-reference EEG
             rerefEEG = Rereference_EEG(recordEEG, hdrEEG, rereferenceMethod); 
 
-            %Extract EEG signal for the selected Channel
-            signalEEG = rerefEEG(chanVec,:);
 
             % Detect artifacts using the automated artifact detection function
             % NOTE: Input unfiltered EEG; function contains filtering
-            [artifactInd,~] = get_automatedArtifacts_EEG(signalEEG, fs, stdAbove, buffer, nArtChans, nChan);
+            [artifactInd,~] = get_automatedArtifacts_EEG(rerefEEG, fs, stdAbove, buffer, nArtChans, numChans);
             
 
-            epochStart = Find_Clean_Indices(N, fs, artifactInd, epochLength); % Find start indices of the clean epochs
+            epochStart = Find_Clean_Indices(artifactInd, fs, epochLength); % Find start indices of the clean epochs
             epochStop = epochStart + epochLength*fs - 1;  % Calculate stop indices for each of clean epoch
             nEpoch = length(epochStart); % Number of clean epochs
             
             % Save start and stop times of each epoch and list of channels
             patientMetrics.epochTimes = [epochStart,epochStop];
             patientMetrics.electrodes = channelsToAnalyze;
+
+            %Extract EEG signal for the selected Channel
+            signalEEG = rerefEEG(chanVec,:);
             
             %% Amplitude
             % Apply broadband filter to EEG
@@ -267,7 +268,7 @@ for p = 1:length(phase)
         end
 
         % Construct the filename using sprintf
-        eegMetricFilename = sprintf('%s_%s_results2.mat', state{s}, phase{p});
+        eegMetricFilename = sprintf('%s_%s_results.mat', state{s}, phase{p});
 
         % Save the variables to the respective files
         save(eegMetricFilename, "eegComputationalMetrics", "fileNames", '-v7.3');
