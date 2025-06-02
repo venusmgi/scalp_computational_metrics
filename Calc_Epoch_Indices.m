@@ -16,15 +16,21 @@ function [nEpochs, startInd, stopInd] = Calc_Epoch_Indices(nSamp, fs, epochLengt
 %   startInd = vector containing starting index for each epoch
 %   stopInd = vector containing ending index for each epoch
 
+
 % Determine start and stop indices for each epoch
 if nargin == 4
+    assert(all(startingIndices> 0), 'Indices cannot be zero or negative; check the startingIndices values and make sure the smallest index is not smaller than 1.')
     nEpochs = length(startingIndices);  % number of epochs in data
     startInd = startingIndices; % starting index for each epoch
     stopInd = startingIndices+epochLength*fs - 1; % ending index for each epoch
+
 else
     nEpochs = floor(nSamp./(epochLength*fs));  % number of epochs in data
     startInd = (0:nEpochs-1)*fs*epochLength + 1;  % starting index for each epoch
     stopInd = (1:nEpochs)*epochLength*fs;  % ending index for each epoch
+end
+if (~isempty(startInd) & (startInd(1) > fs*epochLength*10) ) %if the starting index is larger than 10 epochLength throw a warning
+    warning('The starting clean index of this arra is large, which may result in less clean epochs available.')
 end
 
 % Ensure indices are within bounds
