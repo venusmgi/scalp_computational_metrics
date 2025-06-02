@@ -4,7 +4,7 @@ function entropy = Calc_ShannonEntropy(data,fs,nBins,epochLength,startingIndices
 %
 % Inputs:
 %   data       : Filtered clean EEG data (channels x time points).
-%   nBins      : Optimal bin count to use (default 390). Use the
+%   nBins      : Optimal bin count to use. Use the
 %                    Freedman-Diaconis rule on the signal to calculate:
 %                    nBins = (max(x) - min(x)) / (2 * IQR(x) * length(x)^(-1/3)).
 %   epochLength    : Length of each epoch in seconds.
@@ -23,7 +23,7 @@ function entropy = Calc_ShannonEntropy(data,fs,nBins,epochLength,startingIndices
 
 % Number of channels and samples in EEG record
 nChan = size(data, 1);
-nSamp = size(data,2);
+nSamp = size(data, 2);
 
 % Determine start and stop indices for each epoch
 if nargin == 5
@@ -35,7 +35,9 @@ end
 % Initialize entropy matrix
 entropy = nan(nEpochs, nChan);
 
-% Calculate entropy for each channel and epoch
+% Calculate entropy for each channel and epoch; need to loop through both
+% because we need to calculate a histogram for each pair of values (cannot
+% be vectorized)
 for chanId = 1:nChan
     for epochInd = 1:nEpochs
         % Extract EEG epoch
