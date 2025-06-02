@@ -5,6 +5,9 @@ function [EEG_reref] = Rereference_EEG(EEG_record, EEG_hdr, rereferenceMethod)
 % 'EAR' for linked ears, 'CAR' for common average reference, 'bipolar' for bipolar referencing,
 % or a specific channel name for single-channel referencing.
 %
+% NOTE: This function assumes that the EEG channel order and names have
+% been standardized; this can be verified with Check_EEG_Standardization.
+%
 % Inputs:
 %   EEG_record - Matrix of EEG data (channels x time points).
 %   EEG_hdr - Header information containing channel labels.
@@ -16,7 +19,6 @@ function [EEG_reref] = Rereference_EEG(EEG_record, EEG_hdr, rereferenceMethod)
 %
 % Outputs:
 %   EEG_reref - The re-referenced EEG data.
-
 
 % Define the list of channel names for potential single-channel referencing
 channelList =  {'Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1',...
@@ -69,41 +71,43 @@ elseif strcmp(rereferenceMethod, 'bipolar')
     T5 = Get_Channel_Loc ('T5',EEG_hdr);
     T6 = Get_Channel_Loc ('T6',EEG_hdr);
 
-
-
     EEG_reref = nan(16,length(EEG_record));
-    EEG_reref(1,:) = EEG_record(Fp1,:)-EEG_record(F3,:);
-    EEG_reref(2,:) = EEG_record(F3,:)-EEG_record(C3,:);
-    EEG_reref(3,:) = EEG_record(C3,:)-EEG_record(P3,:);
-    EEG_reref(4,:) = EEG_record(P3,:)-EEG_record(O1,:);
-    
-    EEG_reref(5,:) = EEG_record(Fp1,:)-EEG_record(F7,:);
-    EEG_reref(6,:) = EEG_record(F7,:)-EEG_record(T3,:);
-    EEG_reref(7,:) = EEG_record(T3,:)-EEG_record(T5,:);
-    EEG_reref(8,:) = EEG_record(T5,:)-EEG_record(O1,:);
-    
-    
-    EEG_reref(9,:) = EEG_record(Fp2,:)-EEG_record(F4,:);
-    EEG_reref(10,:) = EEG_record(F4,:)-EEG_record(C4,:);
-    EEG_reref(11,:) = EEG_record(C4,:)-EEG_record(P4,:);
-    EEG_reref(12,:) = EEG_record(P4,:)-EEG_record(O2,:);
-    
-    EEG_reref(13,:) = EEG_record(Fp2,:)-EEG_record(F8,:);
-    EEG_reref(14,:) = EEG_record(F8,:)-EEG_record(T4,:);
-    EEG_reref(15,:) = EEG_record(T4,:)-EEG_record(T6,:);
-    EEG_reref(16,:) = EEG_record(T6,:)-EEG_record(O2,:);
 
+    EEG_reref(1,:) = EEG_record(Fp1,:)-EEG_record(F7,:);
+    EEG_reref(2,:) = EEG_record(F7,:)-EEG_record(T3,:);
+    EEG_reref(3,:) = EEG_record(T3,:)-EEG_record(T5,:);
+    EEG_reref(4,:) = EEG_record(T5,:)-EEG_record(O1,:);
+
+    EEG_reref(5,:) = EEG_record(Fp1,:)-EEG_record(F3,:);
+    EEG_reref(6,:) = EEG_record(F3,:)-EEG_record(C3,:);
+    EEG_reref(7,:) = EEG_record(C3,:)-EEG_record(P3,:);
+    EEG_reref(8,:) = EEG_record(P3,:)-EEG_record(O1,:);
+    
+    EEG_reref(9,:) = EEG_record(Fz,:)-EEG_record(Cz,:);
+    EEG_reref(10,:) = EEG_record(Cz,:)-EEG_record(Pz,:);
+    
+    EEG_reref(11,:) = EEG_record(Fp2,:)-EEG_record(F4,:);
+    EEG_reref(12,:) = EEG_record(F4,:)-EEG_record(C4,:);
+    EEG_reref(13,:) = EEG_record(C4,:)-EEG_record(P4,:);
+    EEG_reref(14,:) = EEG_record(P4,:)-EEG_record(O2,:);
+    
+    EEG_reref(15,:) = EEG_record(Fp2,:)-EEG_record(F8,:);
+    EEG_reref(16,:) = EEG_record(F8,:)-EEG_record(T4,:);
+    EEG_reref(17,:) = EEG_record(T4,:)-EEG_record(T6,:);
+    EEG_reref(18,:) = EEG_record(T6,:)-EEG_record(O2,:);
 
 elseif contains(rereferenceMethod, channelList) 
     % Single-Channel Re-referencing:
-    % Check if only a single channel is chosen fo re-referencing
-    if sum(contains(rereferenceMethod, channelList)) >1
+    % Ensure that only a single channel is chosen for re-referencing
+    if sum(contains(rereferenceMethod, channelList)) > 1
         error ('Choose only one channel for re-referencing.')
     end
+    
     % Find the reference channel index
     referenceChannel = strcmp(rereferenceMethod,channelList);
+
     % Subtract the reference channel from all channels
-    EEG_reref = EEG_record - EEG_record(referenceChannel,:);
+    EEG_reref = EEG_record - repmat(EEG_record(referenceChannel,:), size(EEG_record, 1), 1);
 
 else
     % Handle invalid re-referencing method
