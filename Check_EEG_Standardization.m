@@ -37,6 +37,14 @@ end
 % Compare the current channel order against the desired order
 isChannelOrderCorrect = strcmp(headerEEG.label(1:numChannels), desiredChannelOrder);
 
+%% if we don't want to have the same order and we just need to make sure that a spesific channel exists
+% Compare the current channel order against the desired order
+% for i = 1:length(headerEEG.label)
+%     isChannelOrderCorrect(i) = ismember(headerEEG.label{i}, desiredChannelOrder);
+% end
+%%
+
+
 % Verify whether all channels are in the desired order
 if ~all(isChannelOrderCorrect)
     error(['The EEG channel order is not standardized.', ...
