@@ -46,12 +46,16 @@ function [SEF,deltaDB,thetaDB,alphaDB,betaDB,broadDB] = Calc_SEF_SpectralPower(d
 validateattributes(fs, {'numeric'}, {'scalar','positive'}, 'Calc_SEF_SpectralPower_EEG', 'fs', 2)
 validateattributes(epochLength, {'numeric'}, {'scalar', 'positive'}, 'Calc_SEF_EEG_Venus','epochLength',3)
 
-% Parameters
-SEFCutoff = 55; % frequency cutoff for SEF, in Hz
+
 
 % Number of EEG channels and samples in input data
 nChan = size(data,1);
 nSamp = size(data,2);
+% Check that the data matrix is in the correct orientation
+assert(nChan < nSamp, 'Warning: Number of channels is greater than number of time samples! Data matrix may need to be transposed.')
+
+% Check that the data contains at least 1 second of data
+assert(nSamp >= fs, 'Warning: Data matrix contains less than one second of data.')
 
 % Get epoch start and stop indices
 if nargin == 4
@@ -59,6 +63,10 @@ if nargin == 4
 else
     [nEpochs, startInd, stopInd] = Calc_Epoch_Indices(nSamp, fs, epochLength);
 end
+
+
+% Parameters
+SEFCutoff = 55; % frequency cutoff for SEF, in Hz
 
 % Initialize variables for outputs
 SEF = nan(nEpochs,nChan);
