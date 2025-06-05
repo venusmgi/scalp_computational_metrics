@@ -185,7 +185,7 @@ for p = 1:length(phase)
                 epochEEG = filteredEEG(:,epochStart(epochId):epochStop(epochId));
                 % Calculate amplitude; matrix will be nEpoch x nChan
                 % Here we save the median across all sub-epochs
-                amp(epochId,:) = median(Calc_Amplitude_Range_EEG(epochEEG, fs, subEpochLengthAmp),1);
+                amp(epochId,:) = median(Calc_Amplitude_Range(epochEEG, fs, subEpochLengthAmp),1);
             end
 
             patientMetrics.amplitude = amp;
