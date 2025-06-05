@@ -25,8 +25,13 @@ function permEnt = Calc_PermutationEntropy(data,fs,order,delay,epochLength,start
 % Removed new_size from the output
 
 % Number of channels and samples in EEG record
-nChan = size(data,1);
-nSamp = size(data,2);
+nChan = size(data,1);  % number of EEG channels
+nSamp = size(data,2);  % number of samples (time)
+% Check that the data matrix is in the correct orientation
+assert(nChan < nSamp, 'Warning: Number of channels is greater than number of time samples! Data matrix may need to be transposed.')
+
+% Check that the data contains at least 1 second of data
+assert(nSamp >= fs, 'Warning: Data matrix contains less than one second of data.')
 
 % Determine start and stop indices for each epoch
 if nargin == 6
@@ -45,7 +50,7 @@ for chanId = 1:nChan
         epochEEG = data(chanId,startInd(epochId):stopInd(epochId));
 
         % Calculate permutation entropy
-        [permEnt(epochId,chanId),~] = Pec(epochEEG,order,delay);
+        [permEnt(epochId,chanId),~] = pec(epochEEG,order,delay);
     end
 end
 
