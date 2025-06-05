@@ -30,7 +30,7 @@ else
     stopInd = (1:nEpochs)*epochLength*fs;  % ending index for each epoch
 end
 if (~isempty(startInd) & (startInd(1) > fs*epochLength*10) ) %if the starting index is larger than 10 epochLength throw a warning
-    warning('The starting clean index of this arra is large, which may result in less clean epochs available.')
+    warning('The starting clean index of this array is large, which may result in less clean epochs available.')
 end
 
 % Ensure indices are within bounds
