@@ -158,7 +158,7 @@ for p = 1:length(phase)
 
             % Detect artifacts using the automated artifact detection function
             % NOTE: Input unfiltered EEG; function contains filtering
-            [artifactInd,~] = get_automatedArtifacts_EEG(rerefEEG, fs, stdAbove, buffer, nArtChans, numChans);
+            [artifactInd,~] = Detect_Artifacts(rerefEEG, fs, stdAbove, buffer, nArtChans, numChans);
             
 
             epochStart = Find_Clean_Indices(artifactInd, fs, epochLength); % Find start indices of the clean epochs
