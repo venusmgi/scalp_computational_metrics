@@ -1,4 +1,4 @@
-function ampMatrix = Calc_Amplitude_Range_EEG(data, fs, epochLength, startingIndices)
+function ampMatrix = Calc_Amplitude_Range(data, fs, epochLength, startingIndices)
 % Outputs a matrix of all amplitude values for each epoch and for all
 % channels in the input data, calculated using the range (peak-to-peak).
 % If artifactual epochs need to be removed, they can be identified using
@@ -45,6 +45,8 @@ else
     [nEpochs, startInd, stopInd] = Calc_Epoch_Indices(nSamp, fs, epochLength);
 end
 
+nChan = size(data,1);  % number of EEG channels
+nSamp = size(data,2);  % number of samples (time)
 % Check that the data matrix is in the correct orientation
 assert(nChan < nSamp, 'Warning: Number of channels is greater than number of time samples! Data matrix may need to be transposed.')
 
