@@ -1,4 +1,4 @@
-function [artsBool, artsStruct] = get_automatedArtifacts_EEG(eeg_record,fs,stdAbove,buffer,minNumArtChans,numChans)
+function [artsBool, artsStruct] = Detect_Artifacts(eeg_record,fs,stdAbove,buffer,minNumArtChans,numChans)
 % Automated artifact detector based on automatic extreme value detection algorithm
 % Outputs a structure with times containing artifacts
 % Based on the methods of Durka et al. 2003; Moretti et al. 2003
