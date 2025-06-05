@@ -19,7 +19,7 @@ function [nEpochs, startInd, stopInd] = Calc_Epoch_Indices(nSamp, fs, epochLengt
 
 % Determine start and stop indices for each epoch
 if nargin == 4
-    assert(all(startingIndices> 0), 'Indices cannot be zero or negative; check the startingIndices values and make sure the smallest index is not smaller than 1.')
+    assert(all(startingIndices> 0), 'Indices cannot be zero or negative; check the "startingIndices" values and make sure the smallest index is not smaller than 1.')
     nEpochs = length(startingIndices);  % number of epochs in data
     startInd = startingIndices; % starting index for each epoch
     stopInd = startingIndices+epochLength*fs - 1; % ending index for each epoch
