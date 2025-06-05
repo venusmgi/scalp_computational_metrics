@@ -21,9 +21,14 @@ function entropy = Calc_ShannonEntropy(data,fs,nBins,epochLength,startingIndices
 % V.1.1: Derek Hu Uploaded onto GitHub.
 % V.2.0: Venus added option to apply entropy calculation for epochs.
 
-% Number of channels and samples in EEG record
-nChan = size(data, 1);
-nSamp = size(data, 2);
+% Number of EEG channels and samples in input data
+nChan = size(data,1);
+nSamp = size(data,2);
+% Check that the data matrix is in the correct orientation
+assert(nChan < nSamp, 'Warning: Number of channels is greater than number of time samples! Data matrix may need to be transposed.')
+
+% Check that the data contains at least 1 second of data
+assert(nSamp >= fs, 'Warning: Data matrix contains less than one second of data.')
 
 % Determine start and stop indices for each epoch
 if nargin == 5
