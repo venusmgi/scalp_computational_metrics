@@ -1,4 +1,4 @@
-function [pe, hist] = Pec(y,m,t)
+function [pe, hist] = PermutationEntropy(y,m,t)
 %  Calculate the permutation entropy
 %
 %  Input:   y: time series;
