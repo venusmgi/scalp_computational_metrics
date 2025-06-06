@@ -66,10 +66,7 @@ stdEEG = std(eeg_filt,0,2);
 % Ensure that artifacts are bigger than the minimum threshold, after
 % removing the mean; if values in stdEEG are too small, make them bigger
 stdEEG(stdEEG<(minThresh/stdAbove)) = minThresh/stdAbove;
-
-possArts = abs(eeg_filt - meanEEG) > stdAbove*stdEEG;
-% possArts = abs(eeg_filt - repmat(meanEEG,1,size(eeg_filt,2))) > repmat(stdAbove,1,size(eeg_filt,2)).*stdEEG;
-
+possArts = abs(eeg_filt - repmat(meanEEG,1,size(eeg_filt,2))) > repmat(stdAbove,1,size(eeg_filt,2)).*stdEEG;
 
 % Get logical vector for artifacts occurring in minimum # of channels
 sumArtsVec = sum(possArts,1);
