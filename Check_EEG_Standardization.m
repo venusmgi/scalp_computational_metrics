@@ -1,11 +1,13 @@
 function Check_EEG_Standardization(desiredChannelOrder, headerEEG)
 % CHECK_EEG_STANDARDIZATION Verifies the EEG channel order and reference names.
-%
-% This function checks whether the data contained in `headerEEG` follows the
-% specified channel order defined by `desiredChannelOrder`. It ensures that the EEG
-% channels are in the correct sequence and that reference channels (A1/M1 and A2/M2)
-% are appropriately labeled. If the channel order is not standardized, it raises an
-% error with suggestions on how to address the issue.
+% 
+% This function checks whether the first n channels contained in `headerEEG` follows
+% the order of the n channels specified by `desiredChannelOrder`. It ensures that the
+% EEG channels are in the correct sequence and that reference channels (A1/M1 and A2/M2)
+% are appropriately labeled. If the channel order is not standardized, it raises an error
+% with suggestions on how to address the issue. If the EEG header has more than n channels,
+% this will not cause an error and the standardization of those additional channels will 
+% not be checked.
 %
 % Inputs:
 %   desiredChannelOrder - A cell array specifying the desired standard order of EEG channels.
@@ -37,16 +39,8 @@ end
 % Compare the current channel order against the desired order
 isChannelOrderCorrect = strcmp(headerEEG.label(1:numChannels), desiredChannelOrder);
 
-%% if we don't want to have the same order and we just need to make sure that a spesific channel exists
-% Compare the current channel order against the desired order
-% for i = 1:length(headerEEG.label)
-%     isChannelOrderCorrect(i) = ismember(headerEEG.label{i}, desiredChannelOrder);
-% end
-%%
-
-
 % Verify whether all channels are in the desired order
 if ~all(isChannelOrderCorrect)
     error(['The EEG channel order is not standardized.', ...
-        ' Please use the "Standardize_EEG_Channel_Order" function to correct the channel order and labels.']);
+        ' Please use the "EEG_Channel_Standardizer" function to correct the channel order and labels.']);
 end
