@@ -50,7 +50,7 @@ for chanId = 1:nChan
         epochEEG = data(chanId,startInd(epochId):stopInd(epochId));
 
         % Calculate permutation entropy
-        [permEnt(epochId,chanId),~] = pec(epochEEG,order,delay);
+        [permEnt(epochId,chanId),~] = PermutationEntropy(epochEEG,order,delay);
     end
 end
 
