@@ -140,6 +140,6 @@ if nargout > 1
             end
         end
     end
-    artsStruct.general = ~artsStruct.impedance;
+    artsStruct.general = double(~artsStruct.impedance);
 
 end
