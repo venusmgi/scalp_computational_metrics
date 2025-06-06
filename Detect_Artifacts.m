@@ -128,7 +128,6 @@ if nargout > 1
     
     % Create output structure
     artsStruct.times = artTimes;  % artifact start/end times in seconds
-    artsStruct.general = ones(1,size(artTimes,1)); % general EEG artifacts
     artsStruct.impedance = zeros(1,size(artTimes,1)); % artifacts due to impedance checks
     
     % Mark any artifact that came from impedence check
@@ -141,5 +140,6 @@ if nargout > 1
             end
         end
     end
+    artsStruct.general = ~artsStruct.impedance;
 
 end
