@@ -46,15 +46,17 @@ clear variables; close all; clc;  % Clear workspace, close all figures, and clea
 
 %% Define directories and parameters for processing
 
-dataDir = 'D:\Venus\Lab projects\NIMBIS\CHOC_NIMBIS';
+dataDir = ['D:\Venus\Lab projects\NIMBIS\EEG clips'];
 phase = {'Pre', 'Post'};  % Phases of the treatment
-headerName = 'reordered_hdr';  % Variable name for EEG header in .mat files
-eegRecordName = 'reordered_record';  % Variable name for EEG data in .mat files
+% phase = {'sleep','wake'};
+% headerName = 'reordered_hdr';  % Variable name for EEG header in .mat files
+headerName = 'clipped_hdr';
+eegRecordName = 'clipped_record';  % Variable name for EEG data in .mat files
 frequencyName = 'frequency';  % Field name for sampling frequency in header
 
 % Desired channel order to have when uploading the .mat file
 desiredChannelOrder =  {'Fp1','Fp2','F3','F4','C3','C4','P3','P4','O1',...
-    'O2','F7','F8','T3','T4','T5','T6','Fz','Cz','Pz','M1','M2'};
+    'O2','F7','F8','T3','T4','T5','T6','Fz','Cz','Pz','A1','A2'};
 
 
 % EEG channels to include in the analysis; write the list in a cell {}
@@ -72,6 +74,7 @@ epochLength = 30;
 % 6 sub-epochs in a larger 30-second epoch
 subEpochLengthAmp = 1; % sub-epoch duration for amplitude, in seconds
 subEpochLengthPSD = 5; % sub-epoch duration for PSD, in seconds
+subEpochLengthPAC = 6;  % sub-epoch duration for PAC, in seconds
 
 % Parameters for artifact detection : in this script this function is
 % removed because the artifact detection had been used on the clipped
@@ -86,6 +89,8 @@ numChans= 19;              % Number of channels to include in artifact detection
 rereferenceMethod = 'EAR';  % choose 'EAR' for linked ears,'CAR' for common average
 % 'bipolar' for  longitudinal bipolar, or any channel name in the "desiredChannelOrder" for single
 % channel referencing
+
+% Paramter for the number of channels that should be used
 
 % Parameters for permutation entropy calculations
 boxSize = 1;
@@ -132,6 +137,7 @@ try
 
                     % Load EEG signal and EEG header
                     addpath(currentDir)
+
                     loadedData = load(fileNames{f}); % doesn't need to specify the path any more Load(currentDir ‘\’ fileNames{f})
                     recordEEG = loadedData.(eegRecordName);
                     hdrEEG = loadedData.(headerName);
@@ -162,11 +168,11 @@ try
 
                     % Re-reference EEG
                     rerefEEG = Rereference_EEG(recordEEG, hdrEEG, rereferenceMethod);
+                    signalLength = size(rerefEEG, 2);
 
-                    % Detect artifacts using the automated artifact detection function
-                    % NOTE: Input unfiltered EEG; function contains filtering
-                    [artifactalIndecies,~] = Detect_Artifacts(rerefEEG, fs, stdAbove, buffer, nArtChans, numChans);
-                    epochStart = Find_Clean_Indices(artifactalIndecies, fs, epochLength); % Find start indices of the clean epochs
+                    [artifactalIndices,~] = Detect_Artifacts(rerefEEG, fs, stdAbove, buffer, nArtChans, numChans);
+                    epochStart = Find_Clean_Indices(artifactalIndices, fs, epochLength); % Find start indices of the clean epochs
+
                     epochStop = epochStart + epochLength*fs - 1;  % Calculate stop indices for each of clean epoch
                     nEpoch = length(epochStart); % Number of clean epochs
 
@@ -174,6 +180,30 @@ try
                     patientMetrics.epochTimes = [epochStart,epochStop];
                     patientMetrics.electrodes = channelsToAnalyze;
                     patientMetrics.epochID = (1:nEpoch)';
+
+                    %% PAC
+                    % Apply broadband filter to EEG
+                    notchFilteredEEG = Filter_EEG(rerefEEG, fs, 'notch'); % Apply notch filter to EEG
+                    amplitudeSignal = Filter_EEG(notchFilteredEEG, fs,'gamma_pac');  % Gamma band (35-70 Hz) for amplitude
+                    phaseSignal = Filter_EEG(notchFilteredEEG, fs,'delta_pac');      % Delta band (3-4 Hz) for phase
+
+                     % Initialize matrices
+                    [MI,MVL] = deal(nan(nEpoch,19));
+                    % Loop through each clean epoch
+                    for epochId = 1:nEpoch
+                        % Select the large epoch of EEG to analyze
+                        epochEEG = rerefEEG(chanVec,epochStart(epochId):epochStop(epochId));
+                        amplitudeEpochEEG = amplitudeSignal(chanVec,epochStart(epochId):epochStop(epochId));
+                        phaseEpochEEG = phaseSignal(chanVec,epochStart(epochId):epochStop(epochId));
+                        % Calculate amplitude; matrix will be nEpoch x nChan
+                        % Here we save the median across all sub-epochs
+                        [epochMI, epochMVL] = Calc_PAC(amplitudeEpochEEG, phaseEpochEEG, fs, subEpochLengthPAC);
+                        % Take the median value across sub-epochs
+                        MI(epochId,:) = median(epochMI, 1);
+                        MVL(epochId,:) = median(epochMVL, 1);
+                    end
+                    patientMetrics.MI = MI;
+                    patientMetrics.MVL = MVL;
 
                     %% Amplitude
                     % Apply broadband filter to EEG
@@ -192,6 +222,9 @@ try
                     end
 
                     patientMetrics.amplitude = amp;
+
+
+
 
                     %% Power Spectral Density and SEF
 
@@ -281,13 +314,16 @@ try
 
 
             % Construct the filename using sprintf
-            eegMetricFilename = sprintf('%s_results_CHOC.mat', phase{p});
+            eegMetricFilename = sprintf('%s_results_testing.mat', phase{p});
+
+            % Create the complete file path using fullfile
+            fullFilePath = fullfile(dataDir, eegMetricFilename);
 
             % Save the variables to the respective files
-            save(eegMetricFilename, "eegComputationalMetrics", "fileNames", '-v7.3');
+            save(fullFilePath, "eegComputationalMetrics", "fileNames", '-v7.3');
 
         catch ME
-            fprint('Error processing phase %s: %s\n',phase{p},ME.message)
+            fprintf('Error processing phase %s: %s\n',phase{p},ME.message)
 
         end
            end
