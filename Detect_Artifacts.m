@@ -81,7 +81,29 @@ impCheckVec = sumImpCheck>8;
 
 % Combine general artifacts with impedance check artifacts
 impCheckVec = [false impCheckVec]; % pad to match the size, no artifact at the begining
-artsBool = artsVec|impCheckVec;
+
+artifactIndices = find(impCheckVec);
+minNeighbors=1;
+
+% For each artifact, count neighbors within threshold distance
+keepMask = false(length(artifactIndices), 1);
+for i=1:length(artifactIndices)
+    % Calculate distances to all other artifacts
+    distances = abs(artifactIndices - artifactIndices(i));
+    % Count neighbors within the threshold of 5 seconds (should I go lower?
+    % like 2 seconds?)
+    numNeighbors = sum(distances > 0 & distances <= fs*5);
+    % Keep if it has enough neighbors
+    keepMask(i) = numNeighbors >= minNeighbors;
+
+end
+
+% Create new vector with only non-isolated artifacts
+impCheckVec_cleaned = impCheckVec;
+impCheckVec_cleaned(artifactIndices(~keepMask)) = 0;
+
+% making a vector that combines all types of artifacts
+artsBool = artsVec|impCheckVec_cleaned;
 
 
 % Pad around each artifact to ensure you get the entire event (buffer = # of seconds)
@@ -132,7 +154,7 @@ if nargout > 1
         for i = 1:size(artTimes,1)
             startSample = round(artTimes(i,1)*fs); % start index of artifact i
             endSample = round(artTimes(i,2)*fs); % end index of artifact i
-            if any(impCheckVec(startSample:endSample))
+            if any(impCheckVec_cleaned(startSample:endSample))
                 artsStruct.impedance(i) = 1;
             end
         end
